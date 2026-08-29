@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance Tracker — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 40px 36px 32px;
+      width: 360px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .login-logo {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 6px;
+    }
+    .login-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f2328;
+      margin-bottom: 4px;
+    }
+    .login-sub {
+      text-align: center;
+      font-size: 13px;
+      color: #57606a;
+      margin-bottom: 28px;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #57606a;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 7px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1f2328;
+      background: #fff;
+      transition: border .15s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background .15s;
+    }
+    .btn-login:hover { background: #1d4ed8; }
+    .error-msg {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+    .login-footer {
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">💰</div>
+    <div class="login-title">Finance Tracker</div>
+    <div class="login-sub">Personal Finance Manager</div>
+
+    <div class="error-msg" id="error-msg">Incorrect username or password.</div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="username" autocomplete="username" placeholder="Enter username" required autofocus/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="Enter password" required/>
+      </div>
+      <button type="submit" class="btn-login">Sign In</button>
+    </form>
+
+    <div class="login-footer">Finance Tracker v1.0 &nbsp;·&nbsp; Local access only</div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (sessionStorage.getItem('ft_auth') === 'true') {
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl    = document.getElementById('error-msg');
+      errEl.classList.remove('show');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (res.ok) {
+          sessionStorage.setItem('ft_auth', 'true');
+          window.location.href = 'index.html';
+        } else {
+          errEl.classList.add('show');
+          document.getElementById('password').value = '';
+          document.getElementById('password').focus();
+        }
+      } catch (err) {
+        errEl.textContent = 'Cannot connect to server. Is it running?';
+        errEl.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

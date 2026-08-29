@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance Tracker</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════ -->
+<aside id="sidebar">
+  <div class="logo">💰 <span>Finance</span>Tracker</div>
+  <nav>
+    <a href="#" data-page="dashboard" data-label="Dashboard">
+      <span class="icon">📊</span> Dashboard
+    </a>
+    <a href="#" data-page="accounts" data-label="Bank Accounts">
+      <span class="icon">🏦</span> Bank Accounts
+    </a>
+    <a href="#" data-page="cash" data-label="Cash Holdings">
+      <span class="icon">💵</span> Cash Holdings
+    </a>
+    <a href="#" data-page="fd" data-label="Fixed Deposits">
+      <span class="icon">🏛️</span> Fixed Deposits
+    </a>
+    <a href="#" data-page="rd" data-label="Recurring Deposits">
+      <span class="icon">📅</span> Recurring Deposits
+    </a>
+    <a href="#" data-page="investments" data-label="Investments">
+      <span class="icon">📈</span> Investments
+    </a>
+    <a href="#" data-page="creditcards" data-label="Credit Cards">
+      <span class="icon">💳</span> Credit Cards
+    </a>
+    <a href="#" data-page="loans" data-label="Loans">
+      <span class="icon">🤝</span> Loans
+    </a>
+    <a href="#" data-page="transactions" data-label="Income & Expenses">
+      <span class="icon">🧾</span> Income &amp; Expenses
+    </a>
+    <a href="#" data-page="epfo" data-label="EPFO Balance">
+      <span class="icon">🏢</span> EPFO Balance
+    </a>
+    <a href="#" data-page="incometax" data-label="Income Tax">
+      <span class="icon">🧾</span> Income Tax
+    </a>
+    <a href="#" data-page="notes" data-label="Payments &amp; Notes">
+      <span class="icon">📝</span> Payments &amp; Notes
+    </a>
+  </nav>
+  <div class="sidebar-footer">Personal Finance Tracker v1.0</div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════ -->
+<div id="main">
+  <div id="topbar">
+    <h1 id="topbar-title">Dashboard</h1>
+    <div class="topbar-right">
+      <span style="font-size:12px;color:var(--muted)" id="topbar-date"></span>
+      <button id="visibility-btn" onclick="toggleVisibility()" title="Show values" style="margin-left:14px;padding:5px 10px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#57606a;display:inline-flex;align-items:center;gap:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+      <button onclick="logout()" style="margin-left:8px;padding:5px 12px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;cursor:pointer;color:#57606a;">Sign Out</button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ─────────────────────────────────────────────────────
+         DASHBOARD PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- ── TOP HERO ROW: Net Worth + Liabilities ── -->
+      <div class="dash-hero-row">
+        <!-- Total Assets / Net Worth -->
+        <div class="dash-hero-card blue">
+          <div class="dash-hero-label">Total Net Worth (Assets)</div>
+          <div class="dash-hero-value" id="dash-total-nw">₹0.00</div>
+          <div class="dash-hero-sub">All assets combined</div>
+          <div class="dash-hero-breakdown" id="dash-nw-hero-breakdown"></div>
+        </div>
+        <!-- Total Liabilities -->
+        <div class="dash-hero-card red">
+          <div class="dash-hero-label">Total Liabilities</div>
+          <div class="dash-hero-value" id="dash-total-liabilities">₹0.00</div>
+          <div class="dash-hero-sub">Credit cards + loans borrowed</div>
+          <div style="display:flex;gap:20px;margin-top:10px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:11px;opacity:.75;margin-bottom:2px">Credit Card Due</div>
+              <div style="font-weight:700;font-size:15px" id="dash-cc-outstanding">₹0.00</div>
+            </div>
+            <div>
+              <div style="font-size:11px;opacity:.75;margin-bottom:2px">Loans Borrowed</div>
+              <div style="font-weight:700;font-size:15px" id="dash-loan-borrowed">₹0.00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats Row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Cash in Hand</div>
+          <div class="value green" id="dash-total-cash">₹0.00</div>
+          <div class="sub">Across all wallets</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Active FDs</div>
+          <div class="value amber" id="dash-fd-count">0</div>
+          <div class="sub" id="dash-fd-total">₹0.00 invested</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Active RDs</div>
+          <div class="value purple" id="dash-rd-count">0</div>
+          <div class="sub" id="dash-rd-total">₹0.00 deposited</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Investments</div>
+          <div class="value blue" id="dash-inv-invested">₹0.00</div>
+          <div class="sub" id="dash-inv-gain">+₹0.00 gain/loss</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">CC Available Limit</div>
+          <div class="value" id="dash-cc-available-stat">₹0.00</div>
+          <div class="sub">Credit remaining</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Money Lent Out</div>
+          <div class="value" id="dash-loan-lent">₹0.00</div>
+          <div class="sub">Others owe you</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">EPFO Balance</div>
+          <div class="value" id="dash-epfo-balance">₹0.00</div>
+          <div class="sub">Provident fund corpus</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="label">Tax Paid (All Years)</div>
+          <div class="value" id="dash-tax-paid">₹0.00</div>
+          <div class="sub" id="dash-tax-years">0 years filed</div>
+        </div>
+      </div>
+
+      <!-- Row 1: Net Worth Breakdown + FD Alerts + RD Alerts -->
+      <div class="grid-3" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><h2>Net Worth Breakdown</h2></div>
+          <div class="card-body">
+            <div class="nw-bar-list" id="dash-nw-bars"></div>
+            <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+              <div id="dash-nw-expense-row"></div>
+              <div class="nw-bar-item" style="margin-bottom:6px">
+                <div class="nw-bar-label">
+                  <span style="color:var(--red)">▼ Total Liabilities</span>
+                  <span style="font-weight:600;color:var(--red)" id="dash-nw-liabilities-bar">₹0.00</span>
+                </div>
+              </div>
+              <div class="nw-bar-item">
+                <div class="nw-bar-label">
+                  <span style="color:var(--green)">= Net Position</span>
+                  <span style="font-weight:700;color:var(--green)" id="dash-nw-net-position">₹0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>🔔 FD Maturity Alerts</h2></div>
+          <div class="card-body" id="dash-fd-alerts">
+            <p style="color:var(--muted);font-size:13px">Loading…</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>🔔 RD Maturity Alerts</h2></div>
+          <div class="card-body" id="dash-rd-alerts">
+            <p style="color:var(--muted);font-size:13px">Loading…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Net Worth Trend (full width) -->
+      <div style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <h2>📈 Net Worth Trend — Last 6 Months</h2>
+            <div style="display:flex;gap:16px;font-size:12px;color:var(--muted)" id="dash-nw-trend-meta"></div>
+          </div>
+          <div class="card-body">
+            <div id="dash-nw-trend-chart" style="width:100%;overflow:hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Monthly Flow + Expense Donut -->
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <h2>Monthly Income vs Expenses</h2>
+            <div style="display:flex;gap:12px;font-size:11px">
+              <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px"></span> Income</span>
+              <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px"></span> Expense</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="mini-chart" id="dash-monthly-chart"></div>
+            <div class="mini-chart-labels" id="dash-monthly-labels"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>This Month's Expenses</h2></div>
+          <div class="card-body" id="dash-expense-donut"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Bank Accounts + Recent Transactions -->
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <h2>Bank Accounts</h2>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('accounts')">View All →</button>
+          </div>
+          <div class="card-body" id="dash-bank-accounts"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Recent Transactions</h2>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('transactions')">View All →</button>
+          </div>
+          <div class="card-body" id="dash-recent-tx"></div>
+        </div>
+      </div>
+
+      <!-- Row 4: Reminders & Todos -->
+      <div style="margin-bottom:20px">
+        <div class="card" id="dash-actions-card">
+          <div class="card-header">
+            <h2>🔔 Reminders &amp; Todos</h2>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('notes')">View All →</button>
+          </div>
+          <div class="card-body" id="dash-pending-actions">
+            <p style="color:var(--muted);font-size:13px">Loading…</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ─────────────────────────────────────────────────────
+         BANK ACCOUNTS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-accounts">
+      <div class="page-header">
+        <h2>Bank Accounts</h2>
+        <button class="btn btn-primary" onclick="addAccount()">+ Add Account</button>
+      </div>
+      <div class="card">
+        <div id="accounts-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nickname</th><th>Bank</th><th>Type</th><th>Account No.</th>
+                <th>Balance</th><th>Interest</th><th>Last Updated</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         CASH HOLDINGS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-cash">
+      <div class="page-header">
+        <h2>Cash Holdings</h2>
+        <button class="btn btn-success" onclick="addCash()">+ Add Cash</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card green">
+          <div class="label">Total Cash</div>
+          <div class="value" id="cash-total">₹0.00</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="cash-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Category</th><th>Amount</th><th>Notes</th><th>Last Updated</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="cash-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         FIXED DEPOSITS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-fd">
+      <div class="page-header">
+        <h2>Fixed Deposits</h2>
+        <button class="btn btn-primary" onclick="addFD()">+ Add FD</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card blue">
+          <div class="label">Total Principal (Active)</div>
+          <div class="value" id="fd-total-principal">₹0.00</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total at Maturity (Active)</div>
+          <div class="value" id="fd-total-maturity">₹0.00</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="fd-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Bank / Ref</th><th>Principal</th><th>Rate</th>
+                <th>Start Date</th><th>Maturity Date</th>
+                <th>Maturity Amt</th><th>Interest</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="fd-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         RECURRING DEPOSITS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-rd">
+      <div class="page-header">
+        <h2>Recurring Deposits</h2>
+        <button class="btn btn-primary" onclick="addRD()">+ Add RD</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card blue">
+          <div class="label">Total Deposited (Active)</div>
+          <div class="value" id="rd-total-deposited">₹0.00</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total Expected at Maturity</div>
+          <div class="value" id="rd-total-maturity">₹0.00</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="rd-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Bank / Ref</th><th>Monthly</th><th>Rate</th>
+                <th>Start</th><th>Maturity</th>
+                <th>Progress</th><th>Deposited</th><th>Expected</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rd-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         INVESTMENTS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-investments">
+      <div class="page-header">
+        <h2>Investments</h2>
+        <button class="btn btn-primary" onclick="addInvestment()">+ Add Investment</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card blue">
+          <div class="label">Total Invested</div>
+          <div class="value" id="inv-total-invested">₹0.00</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Current Value</div>
+          <div class="value" id="inv-total-current">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Overall Gain / Loss</div>
+          <div class="value" id="inv-total-gain">₹0.00</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="inv-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th><th>Name</th><th>Invested</th><th>Current Value</th>
+                <th>Gain / Loss</th><th>Units</th><th>Start Date</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inv-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         CREDIT CARDS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-creditcards">
+      <div class="page-header">
+        <h2>Credit Cards</h2>
+        <button class="btn btn-primary" onclick="addCreditCard()">+ Add Card</button>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card red">
+          <div class="label">Total Outstanding</div>
+          <div class="value" id="cc-total-outstanding">₹0.00</div>
+          <div class="sub">Amount currently due</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="label">Total Credit Limit</div>
+          <div class="value" id="cc-total-limit">₹0.00</div>
+          <div class="sub">Across all cards</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Available Limit</div>
+          <div class="value" id="cc-total-available">₹0.00</div>
+          <div class="sub">Credit remaining</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Total Reward Points</div>
+          <div class="value" id="cc-total-points">0</div>
+          <div class="sub">Across all cards</div>
+        </div>
+      </div>
+
+      <!-- Cards visual row -->
+      <div id="cc-cards-row" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+      <!-- Detail Table -->
+      <div class="card">
+        <div class="card-header"><h2>All Credit Cards</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Card</th><th>Bank</th><th>Network</th><th>Limit</th>
+                <th>Outstanding</th><th>Min Due</th><th>Available</th>
+                <th>Utilisation</th><th>Billing Day</th><th>Due Day</th>
+                <th>APR</th><th>Points</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cc-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LOANS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-loans">
+      <div class="page-header">
+        <h2>Loans</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-danger"  onclick="addLoan('Borrowed')">+ Money Borrowed</button>
+          <button class="btn btn-success" onclick="addLoan('Lent')">+ Money Lent</button>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card red">
+          <div class="label">Total Borrowed (Outstanding)</div>
+          <div class="value" id="loan-total-borrowed">₹0.00</div>
+          <div class="sub">Money you owe others</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total Lent (Outstanding)</div>
+          <div class="value" id="loan-total-lent">₹0.00</div>
+          <div class="sub">Money others owe you</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Net Position</div>
+          <div class="value" id="loan-net">₹0.00</div>
+          <div class="sub">Lent minus Borrowed</div>
+        </div>
+      </div>
+
+      <!-- Borrowed -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <h2 style="color:var(--red)">Money Borrowed (You Owe)</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Person / Source</th><th>Purpose</th><th>Principal</th><th>Outstanding</th><th>Interest</th><th>Loan Date</th><th>Due Date</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="loan-borrowed-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Lent -->
+      <div class="card">
+        <div class="card-header">
+          <h2 style="color:var(--green)">Money Lent (Others Owe You)</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Person</th><th>Purpose</th><th>Principal</th><th>Outstanding</th><th>Interest</th><th>Loan Date</th><th>Due Date</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="loan-lent-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         TRANSACTIONS PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-transactions">
+      <div class="page-header">
+        <h2>Income &amp; Expenses</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success" onclick="addTransaction('Income')">+ Income</button>
+          <button class="btn btn-danger"  onclick="addTransaction('Expense')">+ Expense</button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-body" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">MONTH</label>
+            <input class="form-control" type="month" id="tx-month-filter" style="width:160px" onchange="loadTransactions()"/>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">TYPE</label>
+            <select class="form-control" id="tx-type-filter" style="width:130px" onchange="loadTransactions()">
+              <option value="">All</option>
+              <option>Income</option>
+              <option>Expense</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tx-month-filter').value='';document.getElementById('tx-type-filter').value='';loadTransactions()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card green">
+          <div class="label">Total Income</div>
+          <div class="value" id="tx-total-income">₹0.00</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">Total Expenses</div>
+          <div class="value" id="tx-total-expense">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Net Savings</div>
+          <div class="value" id="tx-net">₹0.00</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="tx-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Category</th><th>Paid Via</th><th>Description</th><th>Amount</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="tx-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         EPFO PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-epfo">
+      <div class="page-header">
+        <h2>EPFO Balance</h2>
+        <button class="btn btn-success" onclick="addEPFO()">+ Add Account</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card green">
+          <div class="label">Total EPFO Balance</div>
+          <div class="value" id="epfo-total-balance">₹0.00</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="epfo-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Member Name</th><th>UAN</th><th>Employer</th>
+                <th>Balance</th><th>Last Updated</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="epfo-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         INCOME TAX PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-incometax">
+      <div class="page-header">
+        <h2>Income Tax</h2>
+        <button class="btn btn-primary" onclick="addIncomeTax()">+ Add Year</button>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card red">
+          <div class="label">Total Tax Paid (All Years)</div>
+          <div class="value" id="it-total-paid">₹0.00</div>
+          <div class="sub">Gross tax outflow</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total Refunds Received</div>
+          <div class="value" id="it-total-refund">₹0.00</div>
+          <div class="sub">Across all years</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="label">Net Tax Paid</div>
+          <div class="value" id="it-net-paid">₹0.00</div>
+          <div class="sub">Tax paid minus refunds</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Total Interest &amp; Fee</div>
+          <div class="value" id="it-total-interest">₹0.00</div>
+          <div class="sub">Penalty / late fees</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="label">Years Filed</div>
+          <div class="value" id="it-years-count">0</div>
+          <div class="sub">Income tax returns</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="it-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Financial Year</th>
+                <th>Assessment Year</th>
+                <th>Regime</th>
+                <th>Gross Income</th>
+                <th>Taxable Income</th>
+                <th>TDS Deducted</th>
+                <th>Advance Tax</th>
+                <th>Self-Assess Tax</th>
+                <th>Total Tax Paid</th>
+                <th>Interest &amp; Fee</th>
+                <th>Refund</th>
+                <th>Filing Status</th>
+                <th>Filing Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="it-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         PAYMENTS & NOTES PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-notes">
+
+      <!-- Summary cards -->
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card blue">
+          <div class="label">Total Items</div>
+          <div class="value" id="notes-count">—</div>
+          <div class="sub">All types combined</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Pending</div>
+          <div class="value" id="notes-pending">—</div>
+          <div class="sub">Awaiting action</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">High Priority</div>
+          <div class="value" id="notes-high">—</div>
+          <div class="sub">Not yet done</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total Amount Due</div>
+          <div class="value" id="notes-amount">—</div>
+          <div class="sub">Pending payments</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="addNote()">+ Add Item</button>
+        <select id="notes-filter-type" class="form-control" style="width:140px" onchange="loadNotes()">
+          <option value="">All Types</option>
+          <option value="Payment">Payment</option>
+          <option value="Todo">Todo</option>
+          <option value="Reminder">Reminder</option>
+          <option value="Note">Note</option>
+        </select>
+        <select id="notes-filter-status" class="form-control" style="width:140px" onchange="loadNotes()">
+          <option value="">All Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+          <option value="Snoozed">Snoozed</option>
+        </select>
+      </div>
+
+      <!-- Cards grid -->
+      <div id="notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px"></div>
+
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-title">Dialog</span>
+      <button class="modal-close" id="modal-close-btn">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+  // Auth guard — redirect to login if not authenticated
+  if (sessionStorage.getItem('ft_auth') !== 'true') {
+    window.location.href = 'login.html';
+  }
+
+  function logout() {
+    sessionStorage.removeItem('ft_auth');
+    fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  }
+
+  // Set today's date in topbar
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN',
+    { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+</script>
+<script src="js/app.js"></script>
+</body>
+</html>
