@@ -14,9 +14,9 @@ A full-stack personal finance management application — Node.js/Express backend
 | 🏛️ Fixed Deposits | Bank, principal, rate, start/maturity dates, maturity amount, status, maturity alerts |
 | 📅 Recurring Deposits | Monthly installment, installments paid/remaining, expected maturity amount, maturity alerts |
 | 📈 Investments | Mutual Funds, Stocks, PPF, NPS, Gold, Bonds, ETFs — invested vs current value, gain/loss |
-| 💳 Credit Cards | Multiple cards — credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits** |
+| 💳 Credit Cards | Multiple cards — credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits**, **edit directly from card tile** |
 | 🤝 Loans | Money borrowed (you owe) and money lent (others owe you) — principal, outstanding, interest, due dates |
-| 🧾 Income & Expenses | Categorised income and expense transactions with month/type filters |
+| 🧾 Income & Expenses | Categorised income and expense transactions with **Date, Type, Category, and Paid Via column filters** |
 | 🏢 EPFO Balance | Employee Provident Fund accounts — **masked UAN**, employer, balance |
 | 🧾 Income Tax | Year-wise tax records — gross income, taxable income, TDS, advance tax, self-assessment tax, interest & fee payable, refunds, filing status |
 | 📝 Payments & Notes | Payment reminders, todos, notes and reminders — title, type, priority, due date, amount, tags, free-text body |
@@ -25,7 +25,7 @@ A full-stack personal finance management application — Node.js/Express backend
 
 ## Privacy & Masking
 
-All financial values and sensitive identity fields are **hidden by default**. Click the 👁 eye icon in the top bar to reveal or re-hide them globally.
+All financial values and sensitive identity fields are **hidden by default**. Each section has its own independent 👁 **Show / Hide** button in the section header — revealing values in one section does **not** affect any other section.
 
 | Field | Masked as |
 |---|---|
@@ -33,6 +33,8 @@ All financial values and sensitive identity fields are **hidden by default**. Cl
 | Bank account numbers | `••••••` |
 | Credit card last-4 digits | `**** ••••••` |
 | EPFO UAN | `••••••` |
+
+> **Per-section isolation:** The visibility state of every page is tracked independently. You can reveal your Bank Account balances while Investments and Credit Cards stay masked.
 
 ---
 
@@ -44,13 +46,77 @@ A full-width SVG area + line chart showing your estimated net worth for each of 
 - 🟢 Green line = net worth growing
 - 🔴 Red line = net worth declining
 - Shows start value, current value, and absolute + % change
-- Fully respects the privacy eye toggle
+- Respects the per-section privacy toggle
 
 ### Expense Impact
 The Net Worth hero card sub-text shows your all-time net flow — `▲ saved` or `▼ spent` — so you can see at a glance whether your cumulative spending has exceeded your income. The Net Worth Breakdown card also shows all-time income and expense totals as context rows.
 
 ### Reminders & Todos Action Card
 Any item in Payments & Notes with type **Reminder** or **Todo** that is not yet marked Done automatically surfaces on the dashboard as an action card. Each mini-card shows the title, priority, due date (with overdue highlighting), amount, and a **✔ Mark Done** button. The card hides automatically when there are no pending items.
+
+---
+
+## Transaction Filters
+
+The Income & Expenses page supports four independent column filters that can be combined freely:
+
+| Filter | Values |
+|---|---|
+| **Date** | Month picker — shows transactions for a specific month |
+| **Type** | All / Income / Expense |
+| **Category** | Dynamically populated from your category list; filtered by selected Type |
+| **Paid Via** | All / Cash / Bank Account / Credit Card / Salary / Other |
+
+Changing the **Type** filter automatically narrows the **Category** dropdown to matching categories. The **Clear** button resets all four filters at once.
+
+---
+
+## Transaction Categories
+
+### Income
+| Category | Icon |
+|---|---|
+| Salary | 💼 |
+| Bonus | 🎯 |
+| Interest | 📈 |
+| Freelance | 🧑‍💻 |
+| Rental Income | 🏘 |
+| Dividends | 📊 |
+| Cashback & Rewards | 🎁 |
+| Gifts Received | 🎀 |
+| Refund | ↩ |
+| Other Income | 💰 |
+
+### Expense
+| Category | Icon |
+|---|---|
+| Rent | 🏠 |
+| Food | 🍽 |
+| Groceries | 🛒 |
+| Dining Out | 🍴 |
+| Utilities | ⚡ |
+| Electricity | 💡 |
+| Mobile Recharge | 📱 |
+| Internet | 🌐 |
+| Gas / LPG | 🔥 |
+| Water Bill | 💧 |
+| Travel | ✈ |
+| Fuel | ⛽ |
+| Shopping | 🛍 |
+| Entertainment | 🎬 |
+| Subscriptions | 📺 |
+| Healthcare | 🏥 |
+| Education | 📚 |
+| Insurance | 🛡 |
+| Home Maintenance | 🔧 |
+| Personal Care | 🧴 |
+| Gifts & Donations | 🤝 |
+| Taxes & Fees | 🏛 |
+| EMI | 🏦 |
+| Credit Card Bill | 💳 |
+| Other | 📌 |
+
+> Categories are stored in `dbo.TransactionCategories`. Emoji icons are rendered client-side to avoid SQL Server collation issues.
 
 ---
 
@@ -86,6 +152,7 @@ sqlcmd -S localhost -E -i db\add_incometax.sql
 sqlcmd -S localhost -E -i db\add_incometax_interest.sql
 sqlcmd -S localhost -E -i db\add_notes.sql
 sqlcmd -S localhost -E -i db\add_credit_card_bill_category.sql
+sqlcmd -S localhost -E -i db\add_categories.sql
 ```
 
 Each script is idempotent — safe to re-run:
@@ -121,18 +188,19 @@ Then open **http://localhost:3001** in your browser.
 ```
 Finance/
 ├── db/
-│   ├── schema.sql                   # Core schema: tables, views, seed data
-│   ├── add_payment_source.sql       # Adds PaymentSource column to Transactions
-│   ├── add_loans.sql                # Adds Loans table
-│   ├── add_creditcards.sql          # Adds CreditCards table
-│   ├── add_epfo.sql                 # Adds EPFOAccounts table
-│   ├── add_incometax.sql            # Adds IncomeTax table
-│   ├── add_incometax_interest.sql   # Adds InterestAndFee column to IncomeTax
-│   ├── add_notes.sql                # Adds Notes table (Payments & Notes module)
+│   ├── schema.sql                        # Core schema: tables, views, seed data
+│   ├── add_payment_source.sql            # Adds PaymentSource column to Transactions
+│   ├── add_loans.sql                     # Adds Loans table
+│   ├── add_creditcards.sql               # Adds CreditCards table
+│   ├── add_epfo.sql                      # Adds EPFOAccounts table
+│   ├── add_incometax.sql                 # Adds IncomeTax table
+│   ├── add_incometax_interest.sql        # Adds InterestAndFee column to IncomeTax
+│   ├── add_notes.sql                     # Adds Notes table (Payments & Notes module)
 │   ├── add_credit_card_bill_category.sql # Adds Credit Card Bill expense category
-│   ├── fix_icons.sql                # Category icon/emoji fix patch
-│   ├── create_login.sql             # SQL Server login creation helper
-│   └── enable_mixed_auth.sql        # Enable SQL Server mixed-mode auth
+│   ├── add_categories.sql               # Adds extended Income & Expense categories
+│   ├── fix_icons.sql                     # Category icon/emoji fix patch
+│   ├── create_login.sql                  # SQL Server login creation helper
+│   └── enable_mixed_auth.sql             # Enable SQL Server mixed-mode auth
 ├── backend/
 │   ├── server.js               # Express app entry point
 │   ├── db.js                   # SQL Server connection pool (mssql)
@@ -145,7 +213,7 @@ Finance/
 │       ├── fd.js               # CRUD /api/fd
 │       ├── rd.js               # CRUD /api/rd
 │       ├── investments.js      # CRUD /api/investments
-│       ├── transactions.js     # CRUD /api/transactions
+│       ├── transactions.js     # CRUD /api/transactions  (filters: type, month, category, paidVia)
 │       ├── categories.js       # CRUD /api/categories
 │       ├── creditcards.js      # CRUD /api/creditcards
 │       ├── loans.js            # CRUD /api/loans
@@ -193,7 +261,7 @@ Finance/
 | GET / PUT / DELETE | `/api/rd/:id` | Read / update / delete an RD |
 | GET / POST | `/api/investments` | List / create investments |
 | GET / PUT / DELETE | `/api/investments/:id` | Read / update / delete an investment |
-| GET / POST | `/api/transactions` | List (`?type=Income\|Expense&month=YYYY-MM`) / create |
+| GET / POST | `/api/transactions` | List (`?type=Income\|Expense&month=YYYY-MM&category=…&paidVia=…`) / create |
 | GET / PUT / DELETE | `/api/transactions/:id` | Read / update / delete a transaction |
 | GET / POST | `/api/categories` | List / create transaction categories |
 | DELETE | `/api/categories/:id` | Delete a category |
@@ -221,7 +289,7 @@ Finance/
 | `FixedDeposits` | FD entries — principal, rate, start/maturity dates, maturity amount |
 | `RecurringDeposits` | RD entries — monthly installment, total installments, expected maturity |
 | `Investments` | All investment types — invested amount, current value, units |
-| `TransactionCategories` | Income/Expense category master (with emoji icons) |
+| `TransactionCategories` | Income/Expense category master |
 | `Transactions` | All income and expense entries — amount, date, category, payment source |
 
 ### Add-on tables (created by migration scripts)
@@ -332,7 +400,8 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 | `add_incometax_interest.sql` | Adds `InterestAndFee` column to `IncomeTax` | Yes |
 | `add_notes.sql` | Creates `Notes` table for Payments & Notes module | Yes |
 | `add_credit_card_bill_category.sql` | Adds `Credit Card Bill` to expense categories | Yes |
-| `fix_icons.sql` | Updates emoji icons in `TransactionCategories` | Yes |
+| `add_categories.sql` | Adds extended Income & Expense categories (Electricity, Mobile Recharge, Groceries, Freelance, etc.) | Yes |
+| `fix_icons.sql` | Clears emoji icons from DB (rendered client-side instead) | Yes |
 | `create_login.sql` | Creates a SQL Server login for SQL Auth mode | Manual — edit before running |
 | `enable_mixed_auth.sql` | Enables SQL Server mixed-mode authentication | One-time system change |
 
@@ -340,11 +409,21 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 
 ## Changelog
 
-### Recent additions
+### v1.4 — Per-section Privacy Toggle
+- **🔒 Independent show/hide per section** — each page now has its own 👁 Show/Hide button in the section header. Revealing values on one page (e.g. Bank Accounts) does not affect any other page. The global topbar toggle has been replaced.
+
+### v1.3 — Transaction Filters & Extended Categories
+- **🔍 Column filters on transactions** — Date (month), Type, Category, and Paid Via filters added to the Income & Expenses table. Category dropdown narrows automatically when Type is selected.
+- **📂 Extended categories** — 17 new categories added: Electricity 💡, Mobile Recharge 📱, Internet 🌐, Gas/LPG 🔥, Water Bill 💧, Groceries 🛒, Healthcare 🏥, Education 📚, Subscriptions 📺, Fuel ⛽, Dining Out 🍴, Entertainment 🎬, Home Maintenance 🔧, Personal Care 🧴, Gifts & Donations 🤝, Taxes & Fees 🏛, EMI 🏦 (Expense); plus Freelance, Rental Income, Dividends, Cashback & Rewards, Gifts Received, Refund (Income).
+
+### v1.2 — Credit Card Edit on Tile
+- **✏️ Edit button on card tiles** — each visual credit card tile now has a pencil button in the top-right corner, opening the full edit modal directly from the card without scrolling to the table.
+
+### v1.1 — Notes, Net Worth Trend & Masking
 - **📝 Payments & Notes** — new full module: track payment reminders, todos, notes with priority, due date, tags, and amount. Items surface on dashboard for quick action.
 - **📈 Net Worth Trend Chart** — SVG line chart on dashboard showing 6-month estimated net worth history with direction indicator (green/red).
 - **💸 Expense Impact** — dashboard hero card shows all-time net savings/spending context. Breakdown card shows total income vs total expense rows.
 - **🔔 Reminders & Todos card** — pending Reminders/Todos from the Notes module appear as an action card on the dashboard with one-click Mark Done.
-- **🔒 Sensitive field masking** — bank account numbers, credit card last-4 digits, and EPFO UAN are masked by default alongside financial values, toggled by the same 👁 eye button.
+- **🔒 Sensitive field masking** — bank account numbers, credit card last-4 digits, and EPFO UAN are masked by default alongside financial values.
 - **🔔 Bell icon** — maturity alert cards and headers updated from ⚠️ warning to 🔔 bell icon.
-- **Desktop shortcut** — `start.bat` updated to wait for server readiness before opening the browser; desktop shortcut created for one-click launch.
+- **Desktop shortcut** — `start.bat` updated to wait for server readiness before opening the browser.
