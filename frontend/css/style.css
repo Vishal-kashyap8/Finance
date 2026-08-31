@@ -311,13 +311,15 @@ tbody tr:hover { background: var(--bg); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 /* ── CHART BARS ── */
-.mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin-top: 10px; }
-.mini-bar-group { flex: 1; display: flex; gap: 2px; align-items: flex-end; }
+.mini-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; }
+.mini-bar-group { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+.mini-bar-values { display: flex; gap: 2px; justify-content: center; margin-bottom: 4px; font-size: 9px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.mini-bars { display: flex; gap: 2px; align-items: flex-end; flex: 1; }
 .mini-bar { flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; }
 .mini-bar.income  { background: var(--green); }
 .mini-bar.expense { background: var(--red); }
-.mini-chart-labels { display: flex; justify-content: space-between; margin-top: 4px; }
-.mini-chart-labels span { font-size: 10px; color: var(--muted); flex: 1; text-align: center; }
+.mini-chart-labels { display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+.mini-chart-labels span { font-size: 11px; color: var(--muted); flex: 1; text-align: center; font-weight: 500; }
 
 /* ── NET WORTH BARS ── */
 .nw-bar-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }

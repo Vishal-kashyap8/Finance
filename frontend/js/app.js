@@ -429,17 +429,26 @@ function renderMonthlyChart(flow) {
   const container = el('dash-monthly-chart');
   const lbl = el('dash-monthly-labels');
   if (!container || !lbl) return;
-  if (!flow.length) { container.innerHTML = ''; return; }
+  if (!flow.length) { container.innerHTML = ''; lbl.innerHTML = ''; return; }
   const maxVal = Math.max(...flow.map(f => Math.max(f.TotalIncome, f.TotalExpense)), 1);
+  const MAX_H  = 140;
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const visible = _pageVisible[_currentPage];
   container.innerHTML = flow.map(f => {
-    const ih = Math.round((f.TotalIncome  / maxVal) * 56);
-    const eh = Math.round((f.TotalExpense / maxVal) * 56);
-    const incLabel = _pageVisible[_currentPage] ? fmt(f.TotalIncome)  : '••••••';
-    const expLabel = _pageVisible[_currentPage] ? fmt(f.TotalExpense) : '••••••';
+    const ih = Math.round((parseFloat(f.TotalIncome)  / maxVal) * MAX_H);
+    const eh = Math.round((parseFloat(f.TotalExpense) / maxVal) * MAX_H);
+    const incLabel = visible ? fmt(f.TotalIncome)  : '••••';
+    const expLabel = visible ? fmt(f.TotalExpense) : '••••';
     return `<div class="mini-bar-group">
-      <div class="mini-bar income"  style="height:${ih}px" title="Income: ${incLabel}"></div>
-      <div class="mini-bar expense" style="height:${eh}px" title="Expense: ${expLabel}"></div>
+      <div class="mini-bar-values">
+        <span style="color:var(--green)">${incLabel}</span>
+        <span style="color:var(--muted)">·</span>
+        <span style="color:var(--red)">${expLabel}</span>
+      </div>
+      <div class="mini-bars">
+        <div class="mini-bar income"  style="height:${ih}px" title="Income: ${incLabel}"></div>
+        <div class="mini-bar expense" style="height:${eh}px" title="Expense: ${expLabel}"></div>
+      </div>
     </div>`;
   }).join('');
   lbl.innerHTML = flow.map(f => `<span>${months[f.Mo - 1]}</span>`).join('');
