@@ -1369,6 +1369,7 @@ function renderCreditCards(cards) {
         const barW = Math.min(pct, 100);
         return `
           <div class="cc-card" style="background:${CC_GRADIENTS[i % CC_GRADIENTS.length]}">
+            <button class="cc-card-edit-btn" onclick="editCreditCard(${c.CardID})" title="Edit card">✏️</button>
             <div class="cc-bank">${c.BankName}</div>
             <div class="cc-name">${c.Nickname}</div>
             <div class="cc-digits">${c.LastFourDigits ? '**** **** **** ' + c.LastFourDigits : '**** **** **** ****'}</div>
