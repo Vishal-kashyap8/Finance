@@ -1,7 +1,7 @@
 // ============================================================
 // Finance Tracker — Frontend JS
 // ============================================================
-const API = 'http://localhost:3001/api';
+const API = window.location.origin + '/api';
 
 // ── Category icon map (avoids emoji corruption in SQL Server) ─
 const CAT_ICONS = {
