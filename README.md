@@ -278,6 +278,107 @@ Finance/
 
 ---
 
+## Entity-Relationship Diagram
+
+```
+┌─────────────────────┐          ┌──────────────────────────┐
+│   BankAccounts      │◄────┐    │  TransactionCategories   │
+│─────────────────────│     │    │──────────────────────────│
+│ PK AccountID        │     │    │ PK CategoryID            │
+│    Nickname         │     │    │    Type (Income|Expense)  │
+│    BankName         │     │    │    Name                  │
+│    AccountNumber    │     │    │    Icon                  │
+│    AccountType      │     └────┤                          │
+│    Balance          │          └──────────────┬───────────┘
+│    InterestRate     │                         │ FK CategoryID (NOT NULL)
+│    IsActive         │          ┌──────────────▼───────────┐
+└──────────┬──────────┘          │      Transactions        │
+           │ FK LinkedAccountID  │──────────────────────────│
+           │ (optional)          │ PK TransactionID         │
+           └────────────────────►│    Type                  │
+                                 │    Amount                │
+┌────────────────────┐           │    TransactionDate       │
+│   CreditCards      │◄──────────┤    PaymentSource         │
+│────────────────────│ FK        │ FK LinkedAccountID (NULL)│
+│ PK CardID          │LinkedCard │ FK LinkedCardID (NULL)   │
+│    Nickname        │ID (opt.)  │    Description           │
+│    BankName        │           └──────────────────────────┘
+│    CardNetwork     │
+│    LastFourDigits  │    ┌─────────────────────┐
+│    CreditLimit     │    │    CashHoldings     │
+│    OutstandingAmt  │    │─────────────────────│
+│    MinimumDue      │    │ PK CashID           │
+│    BillingDate     │    │    Category         │
+│    DueDate         │    │    Amount           │
+│    AnnualFee       │    └─────────────────────┘
+│    RewardPoints    │
+│    InterestRate    │    ┌─────────────────────┐
+└────────────────────┘    │   FixedDeposits     │
+                          │─────────────────────│
+┌────────────────────┐    │ PK FDID             │
+│       Loans        │    │    Principal        │
+│────────────────────│    │    InterestRate     │
+│ PK LoanID          │    │    MaturityAmount   │
+│    LoanType        │    │    InterestEarned*  │ (* computed)
+│    PersonName      │    │    Status           │
+│    PrincipalAmount │    └─────────────────────┘
+│    OutstandingAmt  │
+│    InterestRate    │    ┌─────────────────────┐
+│    LoanDate        │    │ RecurringDeposits   │
+│    DueDate         │    │─────────────────────│
+│    Status          │    │ PK RDID             │
+│ FK LinkedAccountID │    │    MonthlyInstall.  │
+└────────────────────┘    │    TotalInstallments│
+                          │    AmountDeposited* │ (* computed)
+┌────────────────────┐    │    Status           │
+│   EPFOAccounts     │    └─────────────────────┘
+│────────────────────│
+│ PK EPFOID          │    ┌─────────────────────┐
+│    MemberName      │    │    Investments      │
+│    UAN             │    │─────────────────────│
+│    EmployerName    │    │ PK InvestmentID     │
+│    Balance         │    │    Category         │
+└────────────────────┘    │    InvestedAmount   │
+                          │    CurrentValue     │
+┌────────────────────┐    │    Units            │
+│    IncomeTax       │    └─────────────────────┘
+│────────────────────│
+│ PK TaxID           │    ┌─────────────────────┐
+│    FinancialYear   │    │       Notes         │
+│    AssessmentYear  │    │─────────────────────│
+│    GrossIncome     │    │ PK NoteID           │
+│    TaxableIncome   │    │    Title            │
+│    TDSDeducted     │    │    NoteType         │
+│    AdvanceTax      │    │    Priority         │
+│    SelfAssessTax   │    │    Status           │
+│    TaxPaid         │    │    Amount           │
+│    InterestAndFee  │    │    DueDate          │
+│    Refund          │    │    Tags             │
+│    FilingStatus    │    │    Body             │
+└────────────────────┘    └─────────────────────┘
+```
+
+**Foreign Keys:**
+
+| Child table | FK column | Parent table | Notes |
+|---|---|---|---|
+| `Transactions` | `CategoryID` | `TransactionCategories` | NOT NULL |
+| `Transactions` | `LinkedAccountID` | `BankAccounts` | NULL — bank payment source |
+| `Transactions` | `LinkedCardID` | `CreditCards` | NULL — credit card payment source |
+| `Loans` | `LinkedAccountID` | `BankAccounts` | NULL — optional bank link |
+
+**Views:**
+
+| View | Source tables | Purpose |
+|---|---|---|
+| `vw_NetWorthSummary` | BankAccounts, CashHoldings, FixedDeposits, RecurringDeposits, Investments | Asset totals by category |
+| `vw_MonthlyFlow` | Transactions | Monthly income / expense / net savings |
+| `vw_FDMaturityAlert` | FixedDeposits | FDs maturing within 90 days |
+| `vw_CurrentMonthExpenses` | Transactions, TransactionCategories | Current month expense breakdown by category |
+| `vw_CreditCardSummary` | CreditCards | Adds UtilisationPct and AvailableLimit |
+
+---
+
 ## Database Tables
 
 ### Core tables (created by `schema.sql`)
