@@ -337,8 +337,26 @@ tbody tr:hover { background: var(--bg); }
 .empty .empty-icon { font-size: 36px; margin-bottom: 8px; }
 
 /* ── PAGE HEADER ── */
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
 .page-header h2 { font-size: 20px; font-weight: 700; }
+
+/* Per-page visibility toggle button */
+.page-vis-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.page-vis-btn:hover { background: var(--surface); color: var(--text); }
 
 /* ── TOAST ── */
 #toast {

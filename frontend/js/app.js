@@ -51,39 +51,52 @@ const fmtNum  = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionD
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtDateInput = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
 
-// ── Privacy mask ─────────────────────────────────────────────
-let _valuesVisible = false;
+// ── Per-page privacy mask ─────────────────────────────────────
+// Each page key maps to true (visible) or false (masked, default).
+const _pageVisible = {};
+let   _currentPage = 'dashboard';
 
-function toggleVisibility() {
-  _valuesVisible = !_valuesVisible;
-  const btn = document.getElementById('visibility-btn');
-  if (btn) {
-    btn.title     = _valuesVisible ? 'Hide values' : 'Show values';
-    btn.innerHTML = _valuesVisible
-      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
-      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-  }
-  // Re-render the current page with new visibility state
-  const activePage = document.querySelector('.page.active');
-  if (activePage) {
-    const pageId = activePage.id.replace('page-', '');
-    loadPage(pageId);
-  }
+const SVG_EYE_OFF = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const SVG_EYE_ON  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+function toggleVisibility(pageId) {
+  _pageVisible[pageId] = !_pageVisible[pageId];
+  // Re-render only this page
+  loadPage(pageId);
 }
 
-// Returns masked value or real formatted value
+// Inject a per-page eye toggle into .page-header or topbar-title row.
+// Safe to call on every load — replaces any existing button.
+function _injectPageVisibilityBtn(pageId) {
+  const page = el('page-' + pageId);
+  if (!page) return;
+  const header = page.querySelector('.page-header');
+  if (!header) return;
+
+  // Remove old btn if present
+  const old = header.querySelector('.page-vis-btn');
+  if (old) old.remove();
+
+  const visible = !!_pageVisible[pageId];
+  const btn = document.createElement('button');
+  btn.className = 'page-vis-btn';
+  btn.title     = visible ? 'Hide values' : 'Show values';
+  btn.innerHTML = (visible ? SVG_EYE_ON : SVG_EYE_OFF) + `<span>${visible ? 'Hide' : 'Show'}</span>`;
+  btn.onclick   = () => toggleVisibility(pageId);
+  header.appendChild(btn);
+}
+
+// Returns masked value or real formatted value — uses current page state
 function mfmt(n) {
-  return _valuesVisible ? fmt(n) : '<span class="masked-value">₹••••••</span>';
+  return _pageVisible[_currentPage] ? fmt(n) : '<span class="masked-value">₹••••••</span>';
 }
-// For plain numbers (e.g. gain/loss prefix)
 function mfmtSigned(n) {
-  if (!_valuesVisible) return '<span class="masked-value">₹••••••</span>';
+  if (!_pageVisible[_currentPage]) return '<span class="masked-value">₹••••••</span>';
   return (n >= 0 ? '+' : '') + fmt(n);
 }
-// Masks sensitive identity strings (account numbers, UAN, card digits)
 function mmask(val, fallback = '—') {
   if (!val) return fallback;
-  return _valuesVisible ? val : '<span class="masked-value">••••••</span>';
+  return _pageVisible[_currentPage] ? val : '<span class="masked-value">••••••</span>';
 }
 
 // Safe getElementById — never throws on null
@@ -120,10 +133,12 @@ function navigate(pageId) {
   const link = document.querySelector(`#sidebar nav a[data-page="${pageId}"]`);
   if (link) link.classList.add('active');
   setText('topbar-title', link?.dataset.label || 'Dashboard');
+  _currentPage = pageId;
   loadPage(pageId);
 }
 
 function loadPage(pageId) {
+  _currentPage = pageId;
   const loaders = {
     dashboard:    loadDashboard,
     accounts:     loadAccounts,
@@ -158,6 +173,7 @@ function modalVal(id) { const e = el(id); return e ? e.value : ''; }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
+  _injectPageVisibilityBtn('dashboard');
   try {
     const d = await apiFetch('/dashboard');
     renderNetWorth(d);
@@ -555,6 +571,7 @@ function renderQuickStats(d) {
 
 // ── BANK ACCOUNTS ─────────────────────────────────────────────
 async function loadAccounts() {
+  _injectPageVisibilityBtn('accounts');
   try {
     const data = await apiFetch('/accounts');
     renderAccountsTable(data);
@@ -657,6 +674,7 @@ async function deleteAccount(id) {
 
 // ── CASH ──────────────────────────────────────────────────────
 async function loadCash() {
+  _injectPageVisibilityBtn('cash');
   try {
     const data = await apiFetch('/cash');
     renderCashTable(data);
@@ -733,6 +751,7 @@ async function deleteCash(id) {
 
 // ── FIXED DEPOSITS ────────────────────────────────────────────
 async function loadFD() {
+  _injectPageVisibilityBtn('fd');
   try {
     const data = await apiFetch('/fd');
     renderFDTable(data);
@@ -852,6 +871,7 @@ async function deleteFD(id) {
 
 // ── RECURRING DEPOSITS ────────────────────────────────────────
 async function loadRD() {
+  _injectPageVisibilityBtn('rd');
   try {
     const data = await apiFetch('/rd');
     renderRDTable(data);
@@ -989,6 +1009,7 @@ async function deleteRD(id) {
 
 // ── INVESTMENTS ───────────────────────────────────────────────
 async function loadInvestments() {
+  _injectPageVisibilityBtn('investments');
   try {
     const data = await apiFetch('/investments');
     renderInvestmentsTable(data);
@@ -1108,6 +1129,7 @@ async function deleteInv(id) {
 let _categories = [];
 
 async function loadTransactions() {
+  _injectPageVisibilityBtn('transactions');
   try {
     _categories = await apiFetch('/categories');
     const month    = el('tx-month-filter')?.value    || '';
@@ -1338,6 +1360,7 @@ const CC_GRADIENTS = [
 ];
 
 async function loadCreditCards() {
+  _injectPageVisibilityBtn('creditcards');
   try {
     const data = await apiFetch('/creditcards');
     renderCreditCards(data);
@@ -1536,6 +1559,7 @@ async function deleteCreditCard(id) {
 
 // ── LOANS ─────────────────────────────────────────────────────
 async function loadLoans() {
+  _injectPageVisibilityBtn('loans');
   try {
     const data = await apiFetch('/loans');
     renderLoans(data);
@@ -1707,6 +1731,7 @@ async function deleteLoan(id) {
 
 // ── EPFO ──────────────────────────────────────────────────────
 async function loadEPFO() {
+  _injectPageVisibilityBtn('epfo');
   try {
     const data = await apiFetch('/epfo');
     renderEPFOTable(data);
@@ -1797,6 +1822,7 @@ async function deleteEPFO(id) {
 
 // ── INCOME TAX ────────────────────────────────────────────────
 async function loadIncomeTax() {
+  _injectPageVisibilityBtn('incometax');
   try {
     const data = await apiFetch('/incometax');
     renderIncomeTaxTable(data);
@@ -1993,6 +2019,7 @@ async function deleteIncomeTax(id) {
 const NOTE_TYPE_ICONS = { Payment: '💸', Todo: '✅', Reminder: '🔔', Note: '📝' };
 
 async function loadNotes() {
+  _injectPageVisibilityBtn('notes');
   const filterType   = (el('notes-filter-type')   || {}).value || '';
   const filterStatus = (el('notes-filter-status') || {}).value || '';
   const items = await apiFetch('/notes');

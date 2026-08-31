@@ -62,9 +62,6 @@
     <h1 id="topbar-title">Dashboard</h1>
     <div class="topbar-right">
       <span style="font-size:12px;color:var(--muted)" id="topbar-date"></span>
-      <button id="visibility-btn" onclick="toggleVisibility()" title="Show values" style="margin-left:14px;padding:5px 10px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#57606a;display:inline-flex;align-items:center;gap:4px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-      </button>
       <button onclick="logout()" style="margin-left:8px;padding:5px 12px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;cursor:pointer;color:#57606a;">Sign Out</button>
     </div>
   </div>
@@ -75,6 +72,11 @@
          DASHBOARD PAGE
     ───────────────────────────────────────────────────── -->
     <div class="page active" id="page-dashboard">
+
+      <!-- Dashboard page-header (visibility btn injected here by JS) -->
+      <div class="page-header" style="margin-bottom:14px">
+        <h2>Dashboard</h2>
+      </div>
 
       <!-- ── TOP HERO ROW: Net Worth + Liabilities ── -->
       <div class="dash-hero-row">
@@ -695,6 +697,11 @@
          PAYMENTS & NOTES PAGE
     ───────────────────────────────────────────────────── -->
     <div class="page" id="page-notes">
+
+      <!-- Notes page-header (visibility btn injected here by JS) -->
+      <div class="page-header" style="margin-bottom:14px">
+        <h2>Payments &amp; Notes</h2>
+      </div>
 
       <!-- Summary cards -->
       <div class="stats-grid" style="margin-bottom:20px">
