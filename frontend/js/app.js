@@ -133,6 +133,8 @@ function navigate(pageId) {
   const link = document.querySelector(`#sidebar nav a[data-page="${pageId}"]`);
   if (link) link.classList.add('active');
   setText('topbar-title', link?.dataset.label || 'Dashboard');
+  // Auto-hide values on the page being left before switching
+  _pageVisible[_currentPage] = false;
   _currentPage = pageId;
   loadPage(pageId);
 }
