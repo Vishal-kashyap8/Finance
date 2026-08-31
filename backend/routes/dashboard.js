@@ -73,8 +73,23 @@ router.get('/', async (req, res) => {
       WHERE Status='Active' AND MaturityDate <= DATEADD(DAY, 90, GETDATE())
       ORDER BY MaturityDate`);
 
-    // Current month expense breakdown
-    const expBreakdown = await safeQuery(pool, `SELECT * FROM dbo.vw_CurrentMonthExpenses ORDER BY TotalAmount DESC`);
+    // Expense breakdown — current month by default, or ?expMonth=YYYY-MM
+    let expBreakdown;
+    if (req.query.expMonth) {
+      const [eyr, emo] = req.query.expMonth.split('-').map(Number);
+      expBreakdown = await safeQuery(pool, `
+        SELECT tc.Name AS Category, tc.Icon,
+               SUM(t.Amount) AS TotalAmount
+        FROM dbo.Transactions t
+        JOIN dbo.TransactionCategories tc ON t.CategoryID = tc.CategoryID
+        WHERE t.Type = 'Expense'
+          AND YEAR(t.TransactionDate)  = ${eyr}
+          AND MONTH(t.TransactionDate) = ${emo}
+        GROUP BY tc.Name, tc.Icon
+        ORDER BY TotalAmount DESC`);
+    } else {
+      expBreakdown = await safeQuery(pool, `SELECT * FROM dbo.vw_CurrentMonthExpenses ORDER BY TotalAmount DESC`);
+    }
 
     // Bank accounts
     const accounts = await safeQuery(pool, `SELECT * FROM dbo.BankAccounts WHERE IsActive=1 ORDER BY BankName`);

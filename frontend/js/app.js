@@ -472,10 +472,31 @@ function renderRDAlerts(alerts) {
     </div>`).join('');
 }
 
-function renderExpenseDonut(breakdown) {
+async function refreshExpenseDonut() {
+  const month = el('dash-donut-month')?.value || '';
+  const url   = '/dashboard?' + (month ? 'expMonth=' + month : '');
+  try {
+    const d = await apiFetch(url);
+    renderExpenseDonut(d.expenseBreakdown, month);
+  } catch (e) { showToast(e.message, true); }
+}
+
+function renderExpenseDonut(breakdown, month) {
+  // Update card title to reflect selected month
+  const titleEl = el('dash-donut-title');
+  if (titleEl) {
+    if (month) {
+      const [yr, mo] = month.split('-');
+      const label = new Date(Number(yr), Number(mo) - 1, 1)
+        .toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+      titleEl.textContent = label + ' Expenses';
+    } else {
+      titleEl.textContent = "This Month's Expenses";
+    }
+  }
   const container = el('dash-expense-donut');
   if (!container) return;
-  if (!breakdown.length) { container.innerHTML = '<p class="empty">No expenses this month.</p>'; return; }
+  if (!breakdown.length) { container.innerHTML = '<p class="empty">No expenses for this period.</p>'; return; }
   const colors = ['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#db2777','#ea580c'];
   const total = breakdown.reduce((s, b) => s + parseFloat(b.TotalAmount), 0);
   // cx/cy/r: keep circle centred with enough margin so strokeW/2 never reaches the viewBox edge

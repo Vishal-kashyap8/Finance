@@ -215,7 +215,12 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><h2>This Month's Expenses</h2></div>
+          <div class="card-header">
+            <h2 id="dash-donut-title">This Month's Expenses</h2>
+            <input type="month" id="dash-donut-month" class="form-control"
+              style="width:148px;font-size:12px;padding:4px 8px"
+              onchange="refreshExpenseDonut()"/>
+          </div>
           <div class="card-body" id="dash-expense-donut"></div>
         </div>
       </div>
