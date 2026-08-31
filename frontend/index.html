@@ -537,18 +537,35 @@
       <div class="card" style="margin-bottom:16px">
         <div class="card-body" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
           <div>
-            <label style="font-size:12px;font-weight:600;color:var(--muted)">MONTH</label>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">DATE</label>
             <input class="form-control" type="month" id="tx-month-filter" style="width:160px" onchange="loadTransactions()"/>
           </div>
           <div>
             <label style="font-size:12px;font-weight:600;color:var(--muted)">TYPE</label>
-            <select class="form-control" id="tx-type-filter" style="width:130px" onchange="loadTransactions()">
+            <select class="form-control" id="tx-type-filter" style="width:130px" onchange="txTypeFilterChanged()">
               <option value="">All</option>
               <option>Income</option>
               <option>Expense</option>
             </select>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tx-month-filter').value='';document.getElementById('tx-type-filter').value='';loadTransactions()">Clear</button>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">CATEGORY</label>
+            <select class="form-control" id="tx-category-filter" style="width:160px" onchange="loadTransactions()">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">PAID VIA</label>
+            <select class="form-control" id="tx-paidvia-filter" style="width:150px" onchange="loadTransactions()">
+              <option value="">All</option>
+              <option>Cash</option>
+              <option>Bank Account</option>
+              <option>Credit Card</option>
+              <option>Salary</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearTxFilters()">Clear</button>
         </div>
       </div>
 

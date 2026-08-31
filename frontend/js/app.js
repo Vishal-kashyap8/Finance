@@ -5,20 +5,43 @@ const API = 'http://localhost:3001/api';
 
 // ── Category icon map (avoids emoji corruption in SQL Server) ─
 const CAT_ICONS = {
-  // Income
-  'Salary':       '💼',
-  'Bonus':        '🎯',
-  'Interest':     '📈',
-  'Other Income': '💰',
-  // Expense
-  'Rent':         '🏠',
-  'Food':         '🍽',
-  'Utilities':    '⚡',
-  'Travel':       '✈',
-  'Shopping':     '🛍',
-  'Insurance':    '🛡',
-  'Credit Card Bill': '💳',
-  'Other':        '📌',
+  // ── Income ──────────────────────────────────────────────────
+  'Salary':             '💼',
+  'Bonus':              '🎯',
+  'Interest':           '📈',
+  'Freelance':          '🧑‍💻',
+  'Rental Income':      '🏘',
+  'Dividends':          '📊',
+  'Cashback & Rewards': '🎁',
+  'Gifts Received':     '🎀',
+  'Refund':             '↩',
+  'Other Income':       '💰',
+  // ── Expense ─────────────────────────────────────────────────
+  'Rent':               '🏠',
+  'Food':               '🍽',
+  'Groceries':          '🛒',
+  'Dining Out':         '🍴',
+  'Utilities':          '⚡',
+  'Electricity':        '💡',
+  'Mobile Recharge':    '📱',
+  'Internet':           '🌐',
+  'Gas / LPG':          '🔥',
+  'Water Bill':         '💧',
+  'Travel':             '✈',
+  'Fuel':               '⛽',
+  'Shopping':           '🛍',
+  'Entertainment':      '🎬',
+  'Subscriptions':      '📺',
+  'Healthcare':         '🏥',
+  'Education':          '📚',
+  'Insurance':          '🛡',
+  'Home Maintenance':   '🔧',
+  'Personal Care':      '🧴',
+  'Gifts & Donations':  '🤝',
+  'Taxes & Fees':       '🏛',
+  'EMI':                '🏦',
+  'Credit Card Bill':   '💳',
+  'Other':              '📌',
 };
 function catIcon(name) { return CAT_ICONS[name] || ''; }
 
@@ -1087,14 +1110,52 @@ let _categories = [];
 async function loadTransactions() {
   try {
     _categories = await apiFetch('/categories');
-    const month = el('tx-month-filter')?.value || '';
-    const type  = el('tx-type-filter')?.value  || '';
-    let url = '/transactions?';
-    if (type)  url += `type=${type}&`;
-    if (month) url += `month=${month}`;
-    const data = await apiFetch(url);
+    const month    = el('tx-month-filter')?.value    || '';
+    const type     = el('tx-type-filter')?.value     || '';
+    const category = el('tx-category-filter')?.value || '';
+    const paidVia  = el('tx-paidvia-filter')?.value  || '';
+
+    // Refresh the category dropdown to match the selected type
+    _populateTxCategoryFilter(type);
+
+    const params = new URLSearchParams();
+    if (type)     params.set('type',     type);
+    if (month)    params.set('month',    month);
+    if (category) params.set('category', category);
+    if (paidVia)  params.set('paidVia',  paidVia);
+
+    const data = await apiFetch('/transactions?' + params.toString());
     renderTransactionsTable(data);
   } catch (e) { showToast(e.message, true); }
+}
+
+// Rebuild the category <select> options based on a type restriction.
+// Preserves the current selection when possible.
+function _populateTxCategoryFilter(type) {
+  const sel = el('tx-category-filter');
+  if (!sel) return;
+  const current = sel.value;
+  const filtered = type
+    ? _categories.filter(c => c.Type === type)
+    : _categories;
+  sel.innerHTML = '<option value="">All</option>' +
+    filtered.map(c => `<option value="${c.Name}"${c.Name === current ? ' selected' : ''}>${catIcon(c.Name)} ${c.Name}</option>`).join('');
+}
+
+// Called when the Type filter changes — refreshes categories then reloads.
+function txTypeFilterChanged() {
+  const type = el('tx-type-filter')?.value || '';
+  _populateTxCategoryFilter(type);
+  // Reset category selection since the list just changed
+  const sel = el('tx-category-filter');
+  if (sel) sel.value = '';
+  loadTransactions();
+}
+
+function clearTxFilters() {
+  const ids = ['tx-month-filter', 'tx-type-filter', 'tx-category-filter', 'tx-paidvia-filter'];
+  ids.forEach(id => { const e = el(id); if (e) e.value = ''; });
+  loadTransactions();
 }
 
 function renderTransactionsTable(txs) {

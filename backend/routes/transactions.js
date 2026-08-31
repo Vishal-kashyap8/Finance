@@ -100,6 +100,20 @@ router.get('/', async (req, res) => {
       request.input('yr', sql.Int, parseInt(yr));
       request.input('mo', sql.Int, parseInt(mo));
     }
+    if (req.query.category) {
+      query += ` AND tc.Name = @category`;
+      request.input('category', sql.NVarChar(100), req.query.category);
+    }
+    if (req.query.paidVia) {
+      if (req.query.paidVia === 'Bank Account') {
+        query += ` AND t.PaymentSource = 'Bank Account'`;
+      } else if (req.query.paidVia === 'Credit Card') {
+        query += ` AND t.PaymentSource = 'Credit Card'`;
+      } else {
+        query += ` AND t.PaymentSource = @paidVia`;
+        request.input('paidVia', sql.NVarChar(30), req.query.paidVia);
+      }
+    }
     query += ` ORDER BY t.TransactionDate DESC, t.TransactionID DESC`;
     const result = await request.query(query);
     res.json(result.recordset);
