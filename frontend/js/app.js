@@ -218,13 +218,14 @@ async function dashMarkDone(id) {
 function renderNetWorth(d) {
   const totalExpense = parseFloat(d.totalExpense || 0);
   const totalIncome  = parseFloat(d.totalIncome  || 0);
+  const totalAssets  = parseFloat(d.totalAssets  || d.totalNetWorth || 0);
   const netFlow      = totalIncome - totalExpense; // positive = net saved overall
   setHTML('dash-total-nw', mfmt(d.totalNetWorth));
 
   // Show expense impact line in hero sub-text
   const heroSub = document.querySelector('#page-dashboard .dash-hero-card.blue .dash-hero-sub');
   if (heroSub) {
-    heroSub.innerHTML = `All assets combined &nbsp;·&nbsp;
+    heroSub.innerHTML = `Assets ${mfmt(totalAssets)} minus liabilities &nbsp;·&nbsp;
       <span style="color:${netFlow >= 0 ? 'rgba(255,255,255,.85)' : 'rgba(255,200,200,.9)'}">
         ${netFlow >= 0 ? '▲' : '▼'} ${_valuesVisible ? fmt(Math.abs(netFlow)) : '••••••'} net ${netFlow >= 0 ? 'saved' : 'spent'} all-time
       </span>`;
@@ -235,7 +236,7 @@ function renderNetWorth(d) {
   if (!list) return;
   list.innerHTML = '';
   d.netWorthBreakdown.forEach((r, i) => {
-    const pct = d.totalNetWorth > 0 ? (r.TotalValue / d.totalNetWorth * 100).toFixed(1) : 0;
+    const pct = totalAssets > 0 ? (r.TotalValue / totalAssets * 100).toFixed(1) : 0;
     list.innerHTML += `
       <div class="nw-bar-item">
         <div class="nw-bar-label">
@@ -521,8 +522,7 @@ function renderQuickStats(d) {
   setHTML('dash-total-liabilities', mfmt(liabilities));
   // Liabilities bar in net worth breakdown card
   setHTML('dash-nw-liabilities-bar', mfmt(liabilities));
-  const netPos = parseFloat(d.totalNetWorth || 0) - liabilities;
-  setHTML('dash-nw-net-position', mfmt(netPos));
+  setHTML('dash-nw-net-position', mfmt(d.totalNetWorth));
   // Income tax dashboard widget
   if (d.taxSummary) {
     setHTML('dash-tax-paid', mfmt(d.taxSummary.TotalTaxPaid));
