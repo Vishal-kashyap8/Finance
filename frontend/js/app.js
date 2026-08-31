@@ -266,7 +266,7 @@ function renderNetWorth(d) {
   if (heroSub) {
     heroSub.innerHTML = `Assets ${mfmt(totalAssets)} minus liabilities &nbsp;·&nbsp;
       <span style="color:${netFlow >= 0 ? 'rgba(255,255,255,.85)' : 'rgba(255,200,200,.9)'}">
-        ${netFlow >= 0 ? '▲' : '▼'} ${_valuesVisible ? fmt(Math.abs(netFlow)) : '••••••'} net ${netFlow >= 0 ? 'saved' : 'spent'} all-time
+        ${netFlow >= 0 ? '▲' : '▼'} ${_pageVisible[_currentPage] ? fmt(Math.abs(netFlow)) : '••••••'} net ${netFlow >= 0 ? 'saved' : 'spent'} all-time
       </span>`;
   }
 
@@ -340,10 +340,10 @@ function renderNWTrend(d) {
   // Meta chips
   if (meta) {
     meta.innerHTML = `
-      <span>Start: <strong>${_valuesVisible ? fmt(first) : '••••••'}</strong></span>
-      <span>Now: <strong>${_valuesVisible ? fmt(last) : '••••••'}</strong></span>
+      <span>Start: <strong>${_pageVisible[_currentPage] ? fmt(first) : '••••••'}</strong></span>
+      <span>Now: <strong>${_pageVisible[_currentPage] ? fmt(last) : '••••••'}</strong></span>
       <span style="color:${trending ? 'var(--green)' : 'var(--red)'};font-weight:600">
-        ${trending ? '▲' : '▼'} ${_valuesVisible ? fmt(Math.abs(change)) : '••••'} (${Math.abs(changePct)}%)
+        ${trending ? '▲' : '▼'} ${_pageVisible[_currentPage] ? fmt(Math.abs(change)) : '••••'} (${Math.abs(changePct)}%)
       </span>`;
   }
 
@@ -373,7 +373,7 @@ function renderNWTrend(d) {
   const yGuides = Array.from({ length: ySteps + 1 }, (_, i) => {
     const v = minVal + (range / ySteps) * i;
     const y = yPos(v);
-    const label = _valuesVisible ? (v >= 1e6 ? '₹' + (v/1e6).toFixed(1) + 'L' : v >= 1000 ? '₹' + (v/1000).toFixed(0) + 'K' : '₹' + v.toFixed(0)) : '••••';
+    const label = _pageVisible[_currentPage] ? (v >= 1e6 ? '₹' + (v/1e6).toFixed(1) + 'L' : v >= 1000 ? '₹' + (v/1000).toFixed(0) + 'K' : '₹' + v.toFixed(0)) : '••••';
     return `
       <line x1="${PAD.left}" y1="${y}" x2="${PAD.left + chartW}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>
       <text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#57606a">${label}</text>`;
@@ -382,7 +382,7 @@ function renderNWTrend(d) {
   // X-axis labels + dots + value tooltips
   const xLabels = labels.map((lbl, i) => {
     const x = xPos(i), y = yPos(values[i]);
-    const valLabel = _valuesVisible ? (values[i] >= 1e6 ? '₹' + (values[i]/1e6).toFixed(2) + 'L' : fmt(values[i])) : '••••••';
+    const valLabel = _pageVisible[_currentPage] ? (values[i] >= 1e6 ? '₹' + (values[i]/1e6).toFixed(2) + 'L' : fmt(values[i])) : '••••••';
     const isLast = i === n - 1;
     return `
       <circle cx="${x}" cy="${y}" r="5" fill="${trending ? '#16a34a' : '#dc2626'}" stroke="white" stroke-width="2"/>
@@ -435,8 +435,8 @@ function renderMonthlyChart(flow) {
   container.innerHTML = flow.map(f => {
     const ih = Math.round((f.TotalIncome  / maxVal) * 56);
     const eh = Math.round((f.TotalExpense / maxVal) * 56);
-    const incLabel = _valuesVisible ? fmt(f.TotalIncome)  : '••••••';
-    const expLabel = _valuesVisible ? fmt(f.TotalExpense) : '••••••';
+    const incLabel = _pageVisible[_currentPage] ? fmt(f.TotalIncome)  : '••••••';
+    const expLabel = _pageVisible[_currentPage] ? fmt(f.TotalExpense) : '••••••';
     return `<div class="mini-bar-group">
       <div class="mini-bar income"  style="height:${ih}px" title="Income: ${incLabel}"></div>
       <div class="mini-bar expense" style="height:${eh}px" title="Expense: ${expLabel}"></div>
@@ -494,7 +494,7 @@ function renderExpenseDonut(breakdown) {
     offset += dash;
     return seg;
   });
-  const totalLabel = _valuesVisible ? fmt(total) : '••••••';
+  const totalLabel = _pageVisible[_currentPage] ? fmt(total) : '••••••';
   // width/height set to 100% so the SVG scales with the card — no fixed-pixel clipping
   const svg = `<svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0">${segments.join('')}
     <text x="70" y="65" text-anchor="middle" font-size="10" fill="#57606a">Total</text>
@@ -1036,7 +1036,7 @@ function renderInvestmentsTable(invs) {
   tbody.innerHTML = invs.map(i => {
     const g    = parseFloat(i.CurrentValue || 0) - parseFloat(i.InvestedAmount || 0);
     const gPct = parseFloat(i.InvestedAmount || 0) > 0 ? (g / parseFloat(i.InvestedAmount) * 100).toFixed(1) : 0;
-    const gLabel = _valuesVisible
+    const gLabel = _pageVisible[_currentPage]
       ? `${g>=0?'+':''}${fmt(g)} <span style="font-size:11px">(${gPct}%)</span>`
       : '<span class="masked-value">₹••••••</span>';
     return `<tr>
