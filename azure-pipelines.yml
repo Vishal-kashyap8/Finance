@@ -10,7 +10,7 @@ pr:
 
 variables:
   vmImageName: 'ubuntu-latest'
-  azureSubscription: 'finance-azure-service-connection'
+  azureSubscription: 'Finance-connection'
   resourceGroupName: 'finance-rg'
   location: 'centralindia'
   appServicePlanName: 'finance-app-plan'
