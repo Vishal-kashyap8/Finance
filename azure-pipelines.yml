@@ -48,23 +48,25 @@ stages:
               cd "$(terraformWorkingDirectory)"
               terraform init -input=false
               terraform validate
-              terraform plan -input=false -out=tfplan
+              terraform plan -input=false -var="subscription_id=$(ARM_SUBSCRIPTION_ID)" -out=tfplan
             displayName: Terraform plan
             env:
               ARM_CLIENT_ID: $(ARM_CLIENT_ID)
               ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
               ARM_TENANT_ID: $(ARM_TENANT_ID)
               ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              TF_VAR_subscription_id: $(ARM_SUBSCRIPTION_ID)
 
           - script: |
               cd "$(terraformWorkingDirectory)"
-              terraform apply -input=false -auto-approve tfplan
+              terraform apply -input=false -auto-approve -var="subscription_id=$(ARM_SUBSCRIPTION_ID)" tfplan
             displayName: Terraform apply
             env:
               ARM_CLIENT_ID: $(ARM_CLIENT_ID)
               ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
               ARM_TENANT_ID: $(ARM_TENANT_ID)
               ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              TF_VAR_subscription_id: $(ARM_SUBSCRIPTION_ID)
 
   - stage: Application
     displayName: Deploy Application to Azure App Service
