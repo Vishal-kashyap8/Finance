@@ -1,5 +1,5 @@
 -- ============================================================
--- Run in SSMS: Adds additional Income & Expense categories
+-- Run in SSMS: Adds additional Income & Expense categories For FinaceApp
 -- ============================================================
 USE FinanceTracker;
 GO
