@@ -44,29 +44,35 @@ stages:
               inlineScript: |
                 az account show --output table
 
-          - script: |
-              cd "$(terraformWorkingDirectory)"
-              terraform init -input=false
-              terraform validate
-              terraform plan -input=false -var="subscription_id=$(ARM_SUBSCRIPTION_ID)" -out=tfplan
+          - task: AzureCLI@2
             displayName: Terraform plan
-            env:
-              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-              ARM_TENANT_ID: $(ARM_TENANT_ID)
-              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-              TF_VAR_subscription_id: $(ARM_SUBSCRIPTION_ID)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                export ARM_USE_CLI=true
+                export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
 
-          - script: |
-              cd "$(terraformWorkingDirectory)"
-              terraform apply -input=false -auto-approve -var="subscription_id=$(ARM_SUBSCRIPTION_ID)" tfplan
+                cd "$(terraformWorkingDirectory)"
+                terraform init -input=false
+                terraform validate
+                terraform plan -input=false -var="subscription_id=$ARM_SUBSCRIPTION_ID" -out=tfplan
+
+          - task: AzureCLI@2
             displayName: Terraform apply
-            env:
-              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-              ARM_TENANT_ID: $(ARM_TENANT_ID)
-              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-              TF_VAR_subscription_id: $(ARM_SUBSCRIPTION_ID)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                export ARM_USE_CLI=true
+                export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+
+                cd "$(terraformWorkingDirectory)"
+                terraform apply -input=false -auto-approve tfplan
 
   - stage: Application
     displayName: Deploy Application to Azure App Service
