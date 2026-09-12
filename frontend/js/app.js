@@ -124,6 +124,11 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── Sidebar collapse / expand ─────────────────────────────────
+function collapseSidebar()  { document.body.classList.add('sidebar-collapsed'); }
+function expandSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
+function toggleSidebar()    { document.body.classList.toggle('sidebar-collapsed'); }
+
 // ── Navigation ────────────────────────────────────────────────
 function navigate(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -136,6 +141,8 @@ function navigate(pageId) {
   // Auto-hide values on the page being left before switching
   _pageVisible[_currentPage] = false;
   _currentPage = pageId;
+  // Auto-collapse sidebar so the page gets full width
+  collapseSidebar();
   loadPage(pageId);
 }
 
@@ -153,7 +160,8 @@ function loadPage(pageId) {
     transactions: loadTransactions,
     epfo:         loadEPFO,
     incometax:    loadIncomeTax,
-    notes:        loadNotes,
+    notes:           loadNotes,
+    bankingprofiles: loadBankingProfiles,
   };
   if (loaders[pageId]) loaders[pageId]();
 }
@@ -634,7 +642,15 @@ function renderAccountsTable(accounts) {
     </tr>`).join('');
 }
 
+function _accBankName() {
+  // Read bank name from picker hidden field; fall back to custom input
+  const hidden = (document.getElementById('acc-BankName') || {}).value?.trim() || '';
+  const custom = (document.getElementById('acc-BankNameCustom') || {}).value?.trim() || '';
+  return hidden || custom;
+}
+
 function accountForm(a = {}) {
+  const isCustom = a.BankName && !BP_BANKS.find(b => b.name === a.BankName);
   return `
     <div class="form-row">
       <div class="form-group">
@@ -642,8 +658,24 @@ function accountForm(a = {}) {
         <input class="form-control" id="f-nickname" value="${a.Nickname||''}" placeholder="e.g. HDFC Savings" required/>
       </div>
       <div class="form-group">
-        <label>Bank Name *</label>
-        <input class="form-control" id="f-bank" value="${a.BankName||''}" placeholder="e.g. HDFC Bank" required/>
+        <label>Bank *</label>
+        <input type="hidden" id="acc-BankName" value="${a.BankName||''}"/>
+        <div class="bank-picker-wrap" id="acc-bank-picker-wrap">
+          <button type="button" class="bank-picker-trigger" id="acc-bank-trigger">
+            <span class="bank-picker-placeholder">Select a bank…</span>
+            <span class="bp-chevron">▼</span>
+          </button>
+          <div class="bank-picker-dropdown" id="acc-bank-dropdown">
+            <div class="bank-picker-search">
+              <input id="acc-bank-search" placeholder="Search banks…" autocomplete="off"/>
+            </div>
+            <div class="bank-picker-list" id="acc-bank-list"></div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px;display:${isCustom ? '' : 'none'}" id="acc-custom-bank-row">
+          <label style="font-size:11px">Custom bank name *</label>
+          <input id="acc-BankNameCustom" class="form-control" value="${isCustom ? (a.BankName||'') : ''}" placeholder="Type bank name"/>
+        </div>
       </div>
     </div>
     <div class="form-row">
@@ -677,25 +709,31 @@ function accountForm(a = {}) {
 
 function addAccount() {
   openModal('Add Bank Account', accountForm(), 'Save Account', async () => {
-    const body = { Nickname: modalVal('f-nickname'), BankName: modalVal('f-bank'),
+    const bankName = _accBankName();
+    if (!bankName) { showToast('Please select a bank.', true); return; }
+    const body = { Nickname: modalVal('f-nickname'), BankName: bankName,
       AccountType: modalVal('f-type'), AccountNumber: modalVal('f-accno'),
       Balance: modalVal('f-balance'), InterestRate: modalVal('f-rate') || null,
       Notes: modalVal('f-notes') };
     await apiFetch('/accounts', { method: 'POST', body: JSON.stringify(body) });
     showToast('Account added!'); closeModal(); loadAccounts();
   });
+  setTimeout(() => _initBankPicker('', 'acc'), 0);
 }
 
 async function editAccount(id) {
   const a = await apiFetch('/accounts/' + id);
   openModal('Edit Account', accountForm(a), 'Update Account', async () => {
-    const body = { Nickname: modalVal('f-nickname'), BankName: modalVal('f-bank'),
+    const bankName = _accBankName();
+    if (!bankName) { showToast('Please select a bank.', true); return; }
+    const body = { Nickname: modalVal('f-nickname'), BankName: bankName,
       AccountType: modalVal('f-type'), AccountNumber: modalVal('f-accno'),
       Balance: modalVal('f-balance'), InterestRate: modalVal('f-rate') || null,
       Notes: modalVal('f-notes'), IsActive: 1 };
     await apiFetch('/accounts/' + id, { method: 'PUT', body: JSON.stringify(body) });
     showToast('Account updated!'); closeModal(); loadAccounts();
   });
+  setTimeout(() => _initBankPicker(a.BankName || '', 'acc'), 0);
 }
 
 async function deleteAccount(id) {
@@ -2235,6 +2273,432 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Start on dashboard
+  // Sidebar toggle button (☰ tab on left edge)
+  el('sidebar-toggle').addEventListener('click', toggleSidebar);
+
+  // Keyboard shortcut: S toggles sidebar
+  document.addEventListener('keydown', e => {
+    if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey &&
+        !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+      toggleSidebar();
+    }
+  });
+
+  // Start on dashboard (sidebar stays open on first load)
   navigate('dashboard');
+  expandSidebar();   // keep sidebar visible on initial load
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// BANKING PROFILES — credential vault
+// ═══════════════════════════════════════════════════════════
+
+// Helper: render a masked cell with a per-field 👁 toggle
+function _bpMaskCell(value) {
+  if (!value) return '—';
+  const safe = value.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return `<span class="bp-masked-val">••••••</span>` +
+         `<button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:11px;margin-left:4px"` +
+         ` onclick="toggleBPMask(this)" data-real="${safe}">👁</button>`;
+}
+
+function toggleBPMask(btn) {
+  const span = btn.previousElementSibling;
+  if (span.textContent === '••••••') {
+    span.textContent = btn.dataset.real;
+    btn.textContent  = '🙈';
+  } else {
+    span.textContent = '••••••';
+    btn.textContent  = '👁';
+  }
+}
+
+// ── Load ──────────────────────────────────────────────────
+async function loadBankingProfiles() {
+  _injectPageVisibilityBtn('bankingprofiles');
+  try {
+    const profiles = await apiFetch('/bankingprofiles');
+
+    // Stat card
+    setText('bp-count', profiles.length);
+
+    // Card row — non-sensitive overview per bank
+    const cardsRow = el('bp-cards-row');
+    if (cardsRow) {
+      if (!profiles.length) {
+        cardsRow.innerHTML = '';
+      } else {
+        cardsRow.innerHTML = profiles.map(p => {
+          const bankEntry = BP_BANKS.find(b => b.name === p.BankName);
+          const logoHtml  = bankEntry ? _bpImgTag(bankEntry.favicon, 28) : `<span style="font-size:24px">🏦</span>`;
+          return `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+                      padding:16px 20px;min-width:200px;max-width:240px;flex:0 0 auto">
+            <div style="margin-bottom:8px">${logoHtml}</div>
+            <div style="font-weight:700;font-size:14px">${p.BankName}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">${p.Nickname}</div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-blue">${p.AccountType}</span>
+              ${p.IFSCCode ? `<span class="badge">${p.IFSCCode}</span>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // Detail table
+    const tbody = el('bp-table-body');
+    if (!tbody) return;
+    if (!profiles.length) {
+      tbody.innerHTML = `<tr><td colspan="16" style="text-align:center;padding:40px;color:var(--muted)">
+        No profiles yet. Click <strong>+ Add Profile</strong> to get started.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = profiles.map(p => `
+      <tr>
+        <td><strong>${p.BankName}</strong></td>
+        <td>${p.Nickname}</td>
+        <td><span class="badge badge-blue">${p.AccountType}</span></td>
+        <td>${p.IFSCCode  || '—'}</td>
+        <td>${p.MICRCode  || '—'}</td>
+        <td>${p.BranchName ? p.BranchName + (p.BranchCity ? ', ' + p.BranchCity : '') : (p.BranchCity || '—')}</td>
+        <td>${p.RegisteredMobile || '—'}</td>
+        <td>${p.RegisteredEmail  || '—'}</td>
+        <td>${p.DebitCardLast4   || '—'}</td>
+        <td>${p.DebitCardExpiry  || '—'}</td>
+        <td>${p.UPIIds ? p.UPIIds.split(',').map(u => u.trim()).filter(Boolean).join('<br>') : '—'}</td>
+        <td>${_bpMaskCell(p.AccountNumber)}</td>
+        <td>${_bpMaskCell(p.CustomerID)}</td>
+        <td>${_bpMaskCell(p.NetBankingLoginID)}</td>
+        <td>${_bpMaskCell(p.NetBankingPassword)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="editBankingProfile(${p.ProfileID})">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteBankingProfile(${p.ProfileID})">Del</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    showToast('Error loading Banking Profiles: ' + e.message, true);
+  }
+}
+
+// ── Modal form HTML ───────────────────────────────────────
+// ── Bank master list ─────────────────────────────────────
+// Logos served via Google's public favicon proxy — CORS-free, always works
+const _gf = d => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
+const BP_BANKS = [
+  { name: 'State Bank of India',          ifsc: 'SBIN', favicon: _gf('onlinesbi.sbi') },
+  { name: 'HDFC Bank',                    ifsc: 'HDFC', favicon: _gf('hdfcbank.com') },
+  { name: 'ICICI Bank',                   ifsc: 'ICIC', favicon: _gf('icicibank.com') },
+  { name: 'Axis Bank',                    ifsc: 'UTIB', favicon: _gf('axisbank.com') },
+  { name: 'Kotak Mahindra Bank',          ifsc: 'KKBK', favicon: _gf('kotak.com') },
+  { name: 'Punjab National Bank',         ifsc: 'PUNB', favicon: _gf('pnbindia.in') },
+  { name: 'Bank of Baroda',               ifsc: 'BARB', favicon: _gf('bankofbaroda.in') },
+  { name: 'Canara Bank',                  ifsc: 'CNRB', favicon: _gf('canarabank.com') },
+  { name: 'Union Bank of India',          ifsc: 'UBIN', favicon: _gf('unionbankofindia.co.in') },
+  { name: 'Bank of India',                ifsc: 'BKID', favicon: _gf('bankofindia.co.in') },
+  { name: 'IndusInd Bank',                ifsc: 'INDB', favicon: _gf('indusind.com') },
+  { name: 'Yes Bank',                     ifsc: 'YESB', favicon: _gf('yesbank.in') },
+  { name: 'IDFC First Bank',              ifsc: 'IDFB', favicon: _gf('idfcfirstbank.com') },
+  { name: 'Federal Bank',                 ifsc: 'FDRL', favicon: _gf('federalbank.co.in') },
+  { name: 'South Indian Bank',            ifsc: 'SIBL', favicon: _gf('southindianbank.com') },
+  { name: 'Karnataka Bank',               ifsc: 'KARB', favicon: _gf('karnatakabank.com') },
+  { name: 'Central Bank of India',        ifsc: 'CBIN', favicon: _gf('centralbankofindia.co.in') },
+  { name: 'Indian Bank',                  ifsc: 'IDIB', favicon: _gf('indianbank.in') },
+  { name: 'Indian Overseas Bank',         ifsc: 'IOBA', favicon: _gf('iob.in') },
+  { name: 'UCO Bank',                     ifsc: 'UCBA', favicon: _gf('ucobank.com') },
+  { name: 'Bank of Maharashtra',          ifsc: 'MAHB', favicon: _gf('bankofmaharashtra.in') },
+  { name: 'Punjab & Sind Bank',           ifsc: 'PSIB', favicon: _gf('punjabandsindbank.co.in') },
+  { name: 'IDBI Bank',                    ifsc: 'IBKL', favicon: _gf('idbibank.in') },
+  { name: 'RBL Bank',                     ifsc: 'RATN', favicon: _gf('rblbank.com') },
+  { name: 'Bandhan Bank',                 ifsc: 'BDBL', favicon: _gf('bandhanbank.com') },
+  { name: 'AU Small Finance Bank',        ifsc: 'AUBL', favicon: _gf('aubank.in') },
+  { name: 'Ujjivan Small Finance Bank',   ifsc: 'UJVN', favicon: _gf('ujjivansfb.in') },
+  { name: 'Jana Small Finance Bank',      ifsc: 'JSFB', favicon: _gf('janabank.com') },
+  { name: 'Paytm Payments Bank',          ifsc: 'PYTM', favicon: _gf('paytm.com') },
+  { name: 'Airtel Payments Bank',         ifsc: 'AIRP', favicon: _gf('airtel.in') },
+  { name: 'Other / Custom',              ifsc: '',     favicon: '' },
+];
+
+// Fallback logo when favicon fails to load
+function _bpImgTag(favicon, size = 20) {
+  if (!favicon) return `<span style="width:${size}px;height:${size}px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:${size*0.6}px;flex-shrink:0">🏦</span>`;
+  return `<img src="${favicon}" width="${size}" height="${size}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🏦',style:'width:${size}px;height:${size}px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;flex-shrink:0'}))" loading="lazy"/>`;
+}
+
+// Renders the bank picker widget and wires it up — call after form is in DOM.
+// prefix: ID prefix used for all picker elements (default 'bp', accounts use 'acc')
+// ifscFieldId: optional ID of an IFSC input to auto-fill on selection
+function _initBankPicker(currentName, prefix = 'bp', ifscFieldId = null) {
+  const wrap      = document.getElementById(`${prefix}-bank-picker-wrap`);
+  const trigger   = document.getElementById(`${prefix}-bank-trigger`);
+  const dropdown  = document.getElementById(`${prefix}-bank-dropdown`);
+  const search    = document.getElementById(`${prefix}-bank-search`);
+  const list      = document.getElementById(`${prefix}-bank-list`);
+  const hidden    = document.getElementById(`${prefix}-BankName`);
+  const customRow = document.getElementById(`${prefix}-custom-bank-row`);
+
+  let selected = BP_BANKS.find(b => b.name === currentName) || null;
+
+  function renderTrigger() {
+    if (selected) {
+      trigger.innerHTML = `${_bpImgTag(selected.favicon, 20)}<span>${selected.name}</span><span class="bp-chevron">▼</span>`;
+    } else {
+      trigger.innerHTML = `<span class="bank-picker-placeholder">Select a bank…</span><span class="bp-chevron">▼</span>`;
+    }
+    hidden.value = (selected && selected.name !== 'Other / Custom') ? selected.name : '';
+    if (customRow) customRow.style.display = (selected && selected.name === 'Other / Custom') ? '' : 'none';
+  }
+
+  function renderList(query = '') {
+    const q = query.toLowerCase();
+    const filtered = BP_BANKS.filter(b => b.name.toLowerCase().includes(q));
+    if (!filtered.length) {
+      list.innerHTML = `<div class="bank-picker-none">No banks match "${query}"</div>`;
+      return;
+    }
+    list.innerHTML = filtered.map(b => `
+      <div class="bank-picker-item${selected && selected.name === b.name ? ' selected' : ''}"
+           data-name="${b.name}">
+        ${_bpImgTag(b.favicon, 22)}
+        <span class="bp-item-name">${b.name}</span>
+        ${b.ifsc ? `<span class="bp-item-ifsc">${b.ifsc}…</span>` : ''}
+      </div>`).join('');
+
+    list.querySelectorAll('.bank-picker-item').forEach(item => {
+      item.addEventListener('click', () => {
+        selected = BP_BANKS.find(b => b.name === item.dataset.name);
+        // Auto-fill IFSC prefix if caller provided an IFSC field id and it is empty
+        if (ifscFieldId) {
+          const ifscInput = document.getElementById(ifscFieldId);
+          if (ifscInput && !ifscInput.value && selected.ifsc) {
+            ifscInput.value = selected.ifsc + '0';
+            ifscInput.focus();
+            ifscInput.setSelectionRange(ifscInput.value.length, ifscInput.value.length);
+          }
+        }
+        renderTrigger();
+        closePicker();
+      });
+    });
+  }
+
+  function openPicker() {
+    dropdown.classList.add('open');
+    trigger.classList.add('open');
+    renderList('');
+    setTimeout(() => search.focus(), 50);
+  }
+  function closePicker() {
+    dropdown.classList.remove('open');
+    trigger.classList.remove('open');
+    search.value = '';
+  }
+
+  trigger.addEventListener('click', () => dropdown.classList.contains('open') ? closePicker() : openPicker());
+  search.addEventListener('input', () => renderList(search.value));
+
+  document.addEventListener('mousedown', function handler(e) {
+    if (!wrap.contains(e.target)) {
+      closePicker();
+      document.removeEventListener('mousedown', handler);
+    }
+  });
+
+  // Pre-select if editing an existing record
+  if (currentName) {
+    selected = BP_BANKS.find(b => b.name === currentName) || { name: 'Other / Custom', ifsc: '', favicon: '' };
+    if (selected.name === 'Other / Custom' && currentName !== 'Other / Custom') {
+      hidden.value = currentName;
+      if (customRow) { customRow.style.display = ''; document.getElementById(`${prefix}-BankNameCustom`).value = currentName; }
+      selected = { name: 'Other / Custom', ifsc: '', favicon: '' };
+    }
+  }
+  renderTrigger();
+  renderList('');
+}
+
+function _bpFormHTML(p = {}) {
+  const sel = (val, opt) => val === opt ? ' selected' : '';
+  // Determine if existing name is a known bank or custom
+  const isCustom = p.BankName && !BP_BANKS.find(b => b.name === p.BankName);
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+      <!-- Bank picker -->
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Bank *</label>
+        <input type="hidden" id="bp-BankName" value="${p.BankName || ''}"/>
+        <div class="bank-picker-wrap" id="bp-bank-picker-wrap">
+          <button type="button" class="bank-picker-trigger" id="bp-bank-trigger">
+            <span class="bank-picker-placeholder">Select a bank…</span>
+            <span class="bp-chevron">▼</span>
+          </button>
+          <div class="bank-picker-dropdown" id="bp-bank-dropdown">
+            <div class="bank-picker-search">
+              <input id="bp-bank-search" placeholder="Search banks…" autocomplete="off"/>
+            </div>
+            <div class="bank-picker-list" id="bp-bank-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom bank name — shown only when "Other / Custom" is selected -->
+      <div class="form-group" style="grid-column:1/-1;display:${isCustom ? '' : 'none'}" id="bp-custom-bank-row">
+        <label class="form-label">Custom Bank Name *</label>
+        <input id="bp-BankNameCustom" class="form-control" value="${isCustom ? (p.BankName || '') : ''}" placeholder="Type your bank name"/>
+      </div>
+
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Nickname *</label>
+        <input id="bp-Nickname" class="form-control" value="${p.Nickname || ''}" placeholder="e.g. HDFC Salary Account" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Account Type</label>
+        <select id="bp-AccountType" class="form-control">
+          <option${sel(p.AccountType,'Savings')}>Savings</option>
+          <option${sel(p.AccountType,'Current')}>Current</option>
+          <option${sel(p.AccountType,'NRE')}>NRE</option>
+          <option${sel(p.AccountType,'NRO')}>NRO</option>
+          <option${sel(p.AccountType,'Other')}>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">IFSC Code</label>
+        <input id="bp-IFSCCode" class="form-control" value="${p.IFSCCode || ''}" placeholder="e.g. HDFC0001234"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">MICR Code</label>
+        <input id="bp-MICRCode" class="form-control" value="${p.MICRCode || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Branch Name</label>
+        <input id="bp-BranchName" class="form-control" value="${p.BranchName || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Branch City</label>
+        <input id="bp-BranchCity" class="form-control" value="${p.BranchCity || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Registered Mobile</label>
+        <input id="bp-RegisteredMobile" class="form-control" value="${p.RegisteredMobile || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Registered Email</label>
+        <input id="bp-RegisteredEmail" class="form-control" type="email" value="${p.RegisteredEmail || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Debit Card — Last 4 Digits</label>
+        <input id="bp-DebitCardLast4" class="form-control" value="${p.DebitCardLast4 || ''}" maxlength="4" placeholder="1234"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Debit Card Expiry (MM/YY)</label>
+        <input id="bp-DebitCardExpiry" class="form-control" value="${p.DebitCardExpiry || ''}" placeholder="08/27"/>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">UPI IDs <span style="color:var(--muted);font-size:11px">(comma-separated)</span></label>
+        <input id="bp-UPIIds" class="form-control" value="${p.UPIIds || ''}" placeholder="name@upi, name@bank"/>
+      </div>
+
+      <!-- Sensitive section -->
+      <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          🔒 SENSITIVE FIELDS — stored encrypted in the database
+        </div>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Account Number</label>
+        <input id="bp-AccountNumber" class="form-control" value="${p.AccountNumber || ''}" autocomplete="off"/>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Customer ID / CIF</label>
+        <input id="bp-CustomerID" class="form-control" value="${p.CustomerID || ''}" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Net Banking Username</label>
+        <input id="bp-NetBankingLoginID" class="form-control" value="${p.NetBankingLoginID || ''}" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Net Banking Password</label>
+        <input id="bp-NetBankingPassword" class="form-control" type="password" value="${p.NetBankingPassword || ''}" autocomplete="new-password"/>
+      </div>
+
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Notes</label>
+        <textarea id="bp-Notes" class="form-control" rows="2" style="resize:vertical">${p.Notes || ''}</textarea>
+      </div>
+    </div>`;
+}
+
+// ── Add ───────────────────────────────────────────────────
+function addBankingProfile() {
+  openModal('Add Banking Profile', _bpFormHTML(), 'Save', async () => {
+    const body = _bpReadForm();
+    if (!body.BankName || !body.Nickname) { showToast('Bank and Nickname are required.', true); return; }
+    try {
+      await apiFetch('/bankingprofiles', { method: 'POST', body: JSON.stringify(body) });
+      closeModal();
+      showToast('Banking profile saved! 🔐');
+      loadBankingProfiles();
+    } catch (e) { showToast('Save failed: ' + e.message, true); }
+  });
+  // Init picker after modal HTML is in DOM
+  setTimeout(() => _initBankPicker('', 'bp', 'bp-IFSCCode'), 0);
+}
+
+// ── Edit ──────────────────────────────────────────────────
+async function editBankingProfile(id) {
+  try {
+    const p = await apiFetch('/bankingprofiles/' + id);
+    openModal('Edit Banking Profile', _bpFormHTML(p), 'Update', async () => {
+      const body = _bpReadForm();
+      if (!body.BankName || !body.Nickname) { showToast('Bank and Nickname are required.', true); return; }
+      try {
+        await apiFetch('/bankingprofiles/' + id, { method: 'PUT', body: JSON.stringify(body) });
+        closeModal();
+        showToast('Profile updated! ✔');
+        loadBankingProfiles();
+      } catch (e) { showToast('Update failed: ' + e.message, true); }
+    });
+    // Init picker after modal HTML is in DOM
+    setTimeout(() => _initBankPicker(p.BankName || '', 'bp', 'bp-IFSCCode'), 0);
+  } catch (e) { showToast('Could not load profile: ' + e.message, true); }
+}
+
+// ── Delete ────────────────────────────────────────────────
+async function deleteBankingProfile(id) {
+  if (!confirm('Delete this banking profile? This cannot be undone.')) return;
+  try {
+    await apiFetch('/bankingprofiles/' + id, { method: 'DELETE' });
+    showToast('Profile deleted.');
+    loadBankingProfiles();
+  } catch (e) { showToast('Delete failed: ' + e.message, true); }
+}
+
+// ── Read form values ──────────────────────────────────────
+function _bpReadForm() {
+  // If "Other / Custom" is selected, use the custom text input instead
+  const hiddenBank   = modalVal('bp-BankName').trim();
+  const customBank   = (document.getElementById('bp-BankNameCustom') || {}).value?.trim() || '';
+  const bankName     = hiddenBank || customBank;
+  return {
+    BankName:           bankName,
+    Nickname:           modalVal('bp-Nickname').trim(),
+    AccountType:        modalVal('bp-AccountType'),
+    IFSCCode:           modalVal('bp-IFSCCode').trim()           || null,
+    MICRCode:           modalVal('bp-MICRCode').trim()           || null,
+    BranchName:         modalVal('bp-BranchName').trim()         || null,
+    BranchCity:         modalVal('bp-BranchCity').trim()         || null,
+    RegisteredMobile:   modalVal('bp-RegisteredMobile').trim()   || null,
+    RegisteredEmail:    modalVal('bp-RegisteredEmail').trim()     || null,
+    DebitCardLast4:     modalVal('bp-DebitCardLast4').trim()      || null,
+    DebitCardExpiry:    modalVal('bp-DebitCardExpiry').trim()     || null,
+    UPIIds:             modalVal('bp-UPIIds').trim()              || null,
+    Notes:              modalVal('bp-Notes').trim()               || null,
+    AccountNumber:      modalVal('bp-AccountNumber').trim()       || null,
+    CustomerID:         modalVal('bp-CustomerID').trim()          || null,
+    NetBankingLoginID:  modalVal('bp-NetBankingLoginID').trim()   || null,
+    NetBankingPassword: modalVal('bp-NetBankingPassword').trim()  || null,
+  };
+}

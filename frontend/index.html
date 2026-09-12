@@ -50,6 +50,9 @@
     <a href="#" data-page="notes" data-label="Payments &amp; Notes">
       <span class="icon">📝</span> Payments &amp; Notes
     </a>
+    <a href="#" data-page="bankingprofiles" data-label="Banking Profiles">
+      <span class="icon">🔐</span> Banking Profiles
+    </a>
   </nav>
   <div class="sidebar-footer">Personal Finance Tracker v1.0</div>
 </aside>
@@ -59,7 +62,10 @@
 ═══════════════════════════════════════════════════════════ -->
 <div id="main">
   <div id="topbar">
-    <h1 id="topbar-title">Dashboard</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="sidebar-toggle" title="Toggle sidebar (S)">☰</button>
+      <h1 id="topbar-title">Dashboard</h1>
+    </div>
     <div class="topbar-right">
       <span style="font-size:12px;color:var(--muted)" id="topbar-date"></span>
       <button onclick="logout()" style="margin-left:8px;padding:5px 12px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;cursor:pointer;color:#57606a;">Sign Out</button>
@@ -754,6 +760,58 @@
       <div id="notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px"></div>
 
     </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         BANKING PROFILES PAGE
+    ───────────────────────────────────────────────────── -->
+    <div class="page" id="page-bankingprofiles">
+      <div class="page-header">
+        <h2>Banking Profiles</h2>
+        <button class="btn btn-primary" onclick="addBankingProfile()">+ Add Profile</button>
+      </div>
+
+      <!-- Summary stat -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card blue">
+          <div class="label">Profiles Stored</div>
+          <div class="value" id="bp-count">0</div>
+          <div class="sub">Banks on record</div>
+        </div>
+      </div>
+
+      <!-- Bank card row (non-sensitive overview) -->
+      <div id="bp-cards-row" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+      <!-- Detail table -->
+      <div class="card">
+        <div class="card-header"><h2>All Banking Profiles</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Bank</th>
+                <th>Nickname</th>
+                <th>Type</th>
+                <th>IFSC</th>
+                <th>MICR</th>
+                <th>Branch</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Debit Last4</th>
+                <th>Expiry</th>
+                <th>UPI IDs</th>
+                <th>Account No</th>
+                <th>Customer ID</th>
+                <th>NB Username</th>
+                <th>NB Password</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bp-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /bankingprofiles -->
 
   </div><!-- /content -->
 </div><!-- /main -->

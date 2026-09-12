@@ -49,6 +49,33 @@ body {
   /* Sidebar itself scrolls vertically if nav items overflow */
   overflow-y: auto;
   overflow-x: hidden;
+  transition: transform .25s ease;
+}
+
+/* ── SIDEBAR COLLAPSED ── */
+body.sidebar-collapsed #sidebar {
+  transform: translateX(calc(-1 * var(--sidebar-w)));
+}
+body.sidebar-collapsed #main {
+  margin-left: 0;
+}
+
+/* ── SIDEBAR TOGGLE BUTTON — lives in topbar, always visible ── */
+#sidebar-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+#sidebar-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
 }
 #sidebar .logo {
   padding: 22px 20px 16px;
@@ -95,6 +122,7 @@ body {
   min-height: 100vh;
   /* Main area is the scroll container — sidebar stays fixed, content scrolls freely */
   min-width: 0;
+  transition: margin-left .25s ease;
 }
 #topbar {
   background: var(--surface);
@@ -359,6 +387,101 @@ tbody tr:hover { background: var(--bg); }
   transition: background .15s, color .15s;
 }
 .page-vis-btn:hover { background: var(--surface); color: var(--text); }
+
+/* ── BANK PICKER (custom dropdown with logos) ── */
+.bank-picker-wrap { position: relative; }
+.bank-picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  transition: border-color .15s;
+}
+.bank-picker-trigger:focus,
+.bank-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); outline: none; }
+.bank-picker-trigger img {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+.bank-picker-trigger .bp-chevron {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  transition: transform .15s;
+}
+.bank-picker-trigger.open .bp-chevron { transform: rotate(180deg); }
+.bank-picker-placeholder { color: var(--muted); }
+
+.bank-picker-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  z-index: 9999;
+  overflow: hidden;
+}
+.bank-picker-dropdown.open { display: block; }
+.bank-picker-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.bank-picker-search input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+}
+.bank-picker-search input:focus { border-color: var(--accent); }
+.bank-picker-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.bank-picker-list::-webkit-scrollbar { width: 4px; }
+.bank-picker-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.bank-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 13.5px;
+  transition: background .1s;
+}
+.bank-picker-item:hover { background: var(--bg); }
+.bank-picker-item.selected { background: var(--accent-lt); color: var(--accent); font-weight: 600; }
+.bank-picker-item img {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+.bank-picker-item .bp-item-name { flex: 1; }
+.bank-picker-item .bp-item-ifsc {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: monospace;
+}
+.bank-picker-none { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
 
 /* ── TOAST ── */
 #toast {

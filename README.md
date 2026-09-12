@@ -20,6 +20,7 @@ A full-stack personal finance management application — Node.js/Express backend
 | 🏢 EPFO Balance | Employee Provident Fund accounts — **masked UAN**, employer, balance |
 | 🧾 Income Tax | Year-wise tax records — gross income, taxable income, TDS, advance tax, self-assessment tax, interest & fee payable, refunds, filing status |
 | 📝 Payments & Notes | Payment reminders, todos, notes and reminders — title, type, priority, due date, amount, tags, free-text body |
+| 🔐 Banking Profiles | Full per-bank credential vault — IFSC, MICR, branch, registered mobile/email, debit card last-4, UPI IDs; **Account Number, Customer ID, Net Banking Username & Password stored encrypted**; **searchable bank picker with logos for 30 major Indian banks** |
 
 ---
 
@@ -33,8 +34,24 @@ All financial values and sensitive identity fields are **hidden by default**. Ea
 | Bank account numbers | `••••••` |
 | Credit card last-4 digits | `**** ••••••` |
 | EPFO UAN | `••••••` |
+| Banking Profile — Account Number | `••••••` (click 👁 to reveal) |
+| Banking Profile — Customer ID | `••••••` (click 👁 to reveal) |
+| Banking Profile — Net Banking Username | `••••••` (click 👁 to reveal) |
+| Banking Profile — Net Banking Password | `••••••` (click 👁 to reveal) |
 
 > **Per-section isolation:** The visibility state of every page is tracked independently. You can reveal your Bank Account balances while Investments and Credit Cards stay masked.
+
+---
+
+## Sidebar Auto-Collapse
+
+Clicking any section in the sidebar automatically hides the sidebar so the page content uses the full browser width.
+
+| Action | Result |
+|---|---|
+| Click a sidebar section | Sidebar slides away, page expands to full width |
+| Click **☰** in the topbar | Sidebar slides back |
+| Press **`S`** (when not in a text field) | Toggles sidebar open/closed |
 
 ---
 
@@ -153,6 +170,7 @@ sqlcmd -S localhost -E -i db\add_incometax_interest.sql
 sqlcmd -S localhost -E -i db\add_notes.sql
 sqlcmd -S localhost -E -i db\add_credit_card_bill_category.sql
 sqlcmd -S localhost -E -i db\add_categories.sql
+sqlcmd -S localhost -E -i db\add_banking_profiles.sql
 ```
 
 Each script is idempotent — safe to re-run:
@@ -169,6 +187,7 @@ copy .env.example .env
 Edit `backend\.env`:
 - **Windows Authentication** (default, recommended): leave `DB_TRUSTED_CONNECTION=true`
 - **SQL Auth**: set `DB_USER`, `DB_PASSWORD`, and `DB_TRUSTED_CONNECTION=false`
+- **`DB_ENCRYPT_KEY`** — set this to any strong passphrase (e.g. a long random string). This key encrypts the sensitive Banking Profile fields (Account Number, Customer ID, Net Banking Username, Password) at rest using SQL Server `ENCRYPTBYPASSPHRASE`. **Keep it secret and back it up — losing it makes existing encrypted rows unreadable.**
 
 ### 4. Install dependencies & start
 
@@ -198,6 +217,7 @@ Finance/
 │   ├── add_notes.sql                     # Adds Notes table (Payments & Notes module)
 │   ├── add_credit_card_bill_category.sql # Adds Credit Card Bill expense category
 │   ├── add_categories.sql               # Adds extended Income & Expense categories
+│   ├── add_banking_profiles.sql         # Adds BankingProfiles table (credential vault)
 │   ├── fix_icons.sql                     # Category icon/emoji fix patch
 │   ├── create_login.sql                  # SQL Server login creation helper
 │   └── enable_mixed_auth.sql             # Enable SQL Server mixed-mode auth
@@ -219,7 +239,8 @@ Finance/
 │       ├── loans.js            # CRUD /api/loans
 │       ├── epfo.js             # CRUD /api/epfo
 │       ├── incometax.js        # CRUD /api/incometax
-│       └── notes.js            # CRUD /api/notes
+│       ├── notes.js            # CRUD /api/notes
+│       └── bankingprofiles.js  # CRUD /api/bankingprofiles  (encrypts sensitive fields)
 ├── frontend/
 │   ├── index.html              # Single-page app shell (all pages)
 │   ├── login.html              # Login page
@@ -275,6 +296,8 @@ Finance/
 | GET / PUT / DELETE | `/api/incometax/:id` | Read / update / delete a tax record |
 | GET / POST | `/api/notes` | List / create notes, payments, reminders, todos |
 | GET / PUT / DELETE | `/api/notes/:id` | Read / update / delete a note |
+| GET / POST | `/api/bankingprofiles` | List / create banking profiles (sensitive fields encrypted) |
+| GET / PUT / DELETE | `/api/bankingprofiles/:id` | Read / update / delete a banking profile |
 
 ---
 
@@ -402,6 +425,7 @@ Finance/
 | `EPFOAccounts` | `add_epfo.sql` | Employee Provident Fund accounts — UAN, employer, balance |
 | `IncomeTax` | `add_incometax.sql` + `add_incometax_interest.sql` | Year-wise income tax — gross/taxable income, TDS, advance tax, interest & fee payable, refund, filing status |
 | `Notes` | `add_notes.sql` | Payment reminders, todos, notes — title, type, priority, status, amount, due date, tags, body |
+| `BankingProfiles` | `add_banking_profiles.sql` | Per-bank credential vault — IFSC, MICR, branch, mobile, email, debit last-4, UPI IDs; Account Number / Customer ID / Net Banking Username / Password stored encrypted |
 
 ### Views (created by `schema.sql`)
 
@@ -502,6 +526,7 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 | `add_notes.sql` | Creates `Notes` table for Payments & Notes module | Yes |
 | `add_credit_card_bill_category.sql` | Adds `Credit Card Bill` to expense categories | Yes |
 | `add_categories.sql` | Adds extended Income & Expense categories (Electricity, Mobile Recharge, Groceries, Freelance, etc.) | Yes |
+| `add_banking_profiles.sql` | Creates `BankingProfiles` table — credential vault with encrypted sensitive columns | Yes |
 | `fix_icons.sql` | Clears emoji icons from DB (rendered client-side instead) | Yes |
 | `create_login.sql` | Creates a SQL Server login for SQL Auth mode | Manual — edit before running |
 | `enable_mixed_auth.sql` | Enables SQL Server mixed-mode authentication | One-time system change |
@@ -509,6 +534,23 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 ---
 
 ## Changelog
+
+### v1.7 — Bank Picker with Logos
+- **🏦 Searchable bank picker** — the Bank Name field in Banking Profiles is now a custom dropdown listing 30 major Indian banks with their actual logos (favicons loaded directly from each bank's website — no local assets). Type to filter, click to select.
+- **IFSC auto-fill** — selecting a bank pre-fills the IFSC prefix (e.g. `HDFC0`) so only the branch code needs to be typed.
+- **Other / Custom** — an "Other / Custom" option at the bottom reveals a free-text input for any bank not in the built-in list.
+- **Edit-safe** — re-opening an existing profile pre-selects the correct bank; custom names not in the list revert gracefully to the custom input.
+
+### v1.6 — Sidebar Auto-Collapse
+- **↔ Auto-hide sidebar on navigation** — clicking any section collapses the sidebar automatically, giving the page content full browser width.
+- **☰ Topbar toggle** — a lightweight ☰ button in the topbar left (always visible) slides the sidebar back in or out.
+- **⌨ Keyboard shortcut** — press `S` anywhere on the page (when not in a text field) to toggle the sidebar.
+
+### v1.5 — Banking Profiles (Credential Vault)
+- **🔐 Banking Profiles** — new full module: store a complete per-bank credential profile in one place — IFSC, MICR, branch details, registered mobile/email, debit card last-4 + expiry, UPI IDs, and free-text notes.
+- **🔒 Column-level encryption** — Account Number, Customer ID, Net Banking Username, and Net Banking Password are stored encrypted at rest using SQL Server `ENCRYPTBYPASSPHRASE` with a passphrase from `DB_ENCRYPT_KEY` in `.env`. The passphrase never appears in source code or the database.
+- **👁 Per-field reveal toggle** — all four encrypted fields display as `••••••` by default in the table. Each has its own individual 👁 button to reveal only that field, protecting against accidental screen exposure.
+- **Bank card overview row** — a non-sensitive card row at the top of the page shows bank name, nickname, account type, and IFSC — no sensitive data visible without clicking reveal.
 
 ### v1.4 — Per-section Privacy Toggle
 - **🔒 Independent show/hide per section** — each page now has its own 👁 Show/Hide button in the section header. Revealing values on one page (e.g. Bank Accounts) does not affect any other page. The global topbar toggle has been replaced.

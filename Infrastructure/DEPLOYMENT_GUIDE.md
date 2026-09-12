@@ -122,7 +122,13 @@ DATABASE_PASSWORD=<your_password>
 DATABASE_DIALECT=mssql
 PORT=8080
 NODE_ENV=development
+
+# Banking Profiles encryption key — required for the Banking Profiles module.
+# Set to any strong passphrase. Keep it secret and back it up.
+DB_ENCRYPT_KEY=<your-strong-passphrase-here>
 ```
+
+> **Important:** `DB_ENCRYPT_KEY` is used to encrypt Account Numbers, Customer IDs, Net Banking Usernames and Passwords at rest using SQL Server `ENCRYPTBYPASSPHRASE`. If you change or lose this value, existing encrypted rows in `BankingProfiles` will become unreadable. Store a backup of this key securely (e.g. Azure Key Vault or a password manager).
 
 Add to `.gitignore`:
 

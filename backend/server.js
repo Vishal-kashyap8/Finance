@@ -27,6 +27,7 @@ app.use('/api/loans',        require('./routes/loans'));
 app.use('/api/epfo',         require('./routes/epfo'));
 app.use('/api/incometax',    require('./routes/incometax'));
 app.use('/api/notes',        require('./routes/notes'));
+app.use('/api/bankingprofiles', require('./routes/bankingprofiles'));
 
 // Fallback: always serve login page for unknown routes
 app.get('*', (req, res) => {
