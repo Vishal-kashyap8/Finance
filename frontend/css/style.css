@@ -129,12 +129,18 @@ body {
   align-items: center;
   gap: 12px;
 }
+#topbar-date {
+  color: #eafaff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
 .signout-btn {
   margin-left: 8px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.82);
   border-radius: 6px;
-  color: var(--muted);
+  color: #eefaff;
   font-weight: 600;
 }
 
