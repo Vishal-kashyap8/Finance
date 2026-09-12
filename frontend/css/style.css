@@ -135,13 +135,24 @@ body {
   font-weight: 600;
   letter-spacing: .3px;
 }
-.signout-btn {
+#topbar .topbar-right #topbar-date {
+  color: #eefaff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+#topbar .topbar-right .signout-btn {
   margin-left: 8px;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.82);
   border-radius: 6px;
   color: #eefaff;
   font-weight: 600;
+}
+#topbar .topbar-right .signout-btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: #ffffff;
+  color: #ffffff;
 }
 
 #topbar {
