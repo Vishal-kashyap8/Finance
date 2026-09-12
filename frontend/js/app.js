@@ -65,7 +65,7 @@ function toggleVisibility(pageId) {
   loadPage(pageId);
 }
 
-// Inject a per-page eye toggle into .page-header or topbar-title row.
+// Inject a per-page value visibility toggle switch into .page-header.
 // Safe to call on every load — replaces any existing button.
 function _injectPageVisibilityBtn(pageId) {
   const page = el('page-' + pageId);
@@ -79,10 +79,12 @@ function _injectPageVisibilityBtn(pageId) {
 
   const visible = !!_pageVisible[pageId];
   const btn = document.createElement('button');
+  btn.type = 'button';
   btn.className = 'page-vis-btn';
-  btn.title     = visible ? 'Hide values' : 'Show values';
-  btn.innerHTML = (visible ? SVG_EYE_ON : SVG_EYE_OFF) + `<span>${visible ? 'Hide' : 'Show'}</span>`;
-  btn.onclick   = () => toggleVisibility(pageId);
+  btn.title = visible ? 'Hide values' : 'Show values';
+  btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  btn.innerHTML = visible ? 'Hide' : 'Show';
+  btn.onclick = () => toggleVisibility(pageId);
   header.appendChild(btn);
 }
 
@@ -124,7 +126,7 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── Sidebar collapse / expand ─────────────────────────────────
+// ── Top menu navigation helpers (kept for compatibility) ─────────────────────────────────
 function collapseSidebar()  { document.body.classList.add('sidebar-collapsed'); }
 function expandSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
 function toggleSidebar()    { document.body.classList.toggle('sidebar-collapsed'); }
@@ -132,17 +134,19 @@ function toggleSidebar()    { document.body.classList.toggle('sidebar-collapsed'
 // ── Navigation ────────────────────────────────────────────────
 function navigate(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('#top-menu a').forEach(a => a.classList.remove('active'));
   const page = el('page-' + pageId);
   if (page) page.classList.add('active');
-  const link = document.querySelector(`#sidebar nav a[data-page="${pageId}"]`);
+  const link = document.querySelector(`#top-menu a[data-page="${pageId}"]`);
   if (link) link.classList.add('active');
-  setText('topbar-title', link?.dataset.label || 'Dashboard');
+  // keep same topbar page title visible by updating as needed
+  const topTitle = document.querySelector('#topbar-title');
+  if (topTitle) setText('topbar-title', link?.dataset.label || 'Dashboard');
   // Auto-hide values on the page being left before switching
   _pageVisible[_currentPage] = false;
   _currentPage = pageId;
-  // Auto-collapse sidebar so the page gets full width
-  collapseSidebar();
+  // Keep the current page width consistent with the new top-menu layout
+  expandSidebar();
   loadPage(pageId);
 }
 
@@ -614,32 +618,91 @@ async function loadAccounts() {
   _injectPageVisibilityBtn('accounts');
   try {
     const data = await apiFetch('/accounts');
-    renderAccountsTable(data);
+    const accounts = hydrateAccountsWithLinkedProfiles(data);
+    renderAccountsTable(accounts);
   } catch (e) { showToast(e.message, true); }
+}
+
+function hydrateAccountsWithLinkedProfiles(accounts) {
+  const links = getLinkedProfileMap();
+  return accounts.map(a => {
+    const selected = links[a.AccountID] || a.LinkedProfileID || null;
+    return { ...a, LinkedProfileID: selected };
+  });
+}
+
+function getLinkedProfileMap() {
+  try {
+    return JSON.parse(localStorage.getItem('ft_linked_profile_map') || '{}');
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveLinkedProfileMap(map) {
+  try {
+    localStorage.setItem('ft_linked_profile_map', JSON.stringify(map));
+  } catch (_) {}
+}
+
+function updateLinkedProfileForAccount(accountId, profileId) {
+  const map = getLinkedProfileMap();
+  if (profileId) {
+    map[accountId] = String(profileId);
+  } else {
+    delete map[accountId];
+  }
+  saveLinkedProfileMap(map);
+}
+
+async function loadProfileOptionsForAccount(selectedProfileId = '') {
+  const target = document.getElementById('f-linked-profile');
+  if (!target) return;
+
+  try {
+    const profiles = await apiFetch('/bankingprofiles');
+    target.innerHTML = `<option value="">— No Linked Profile —</option>` + profiles.map(p => `
+      <option value="${p.ProfileID}" ${String(selectedProfileId) === String(p.ProfileID) ? 'selected' : ''}>${p.BankName} / ${p.Nickname}</option>
+    `).join('');
+  } catch (_) {
+    target.innerHTML = `<option value="">— No Linked Profile —</option>`;
+  }
 }
 
 function renderAccountsTable(accounts) {
   const tbody = el('accounts-table-body');
   if (!tbody) return;
   if (!accounts.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty"><span class="empty-icon">🏦</span><br>No bank accounts yet. Add your first account.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty"><span class="empty-icon">🏦</span><br>No bank accounts yet. Add your first account.</td></tr>';
     return;
   }
-  tbody.innerHTML = accounts.map(a => `
-    <tr>
+  tbody.innerHTML = accounts.map(a => {
+    const bankLogo = _bankLogoTag(a.BankName, 20);
+    const linkedProfile = a.LinkedProfileID ? `<a href="#" class="link-account-profile" data-profile-id="${a.LinkedProfileID}" title="Open linked banking profile">${a.LinkedProfileNickname || 'Linked Profile'}</a>` : '—';
+    return `<tr>
       <td><strong>${a.Nickname}</strong></td>
-      <td>${a.BankName}</td>
+      <td style="white-space:nowrap">${bankLogo}<span style="margin-left:8px">${a.BankName}</span></td>
       <td><span class="badge badge-blue">${a.AccountType}</span></td>
       <td style="font-family:monospace;font-size:12px">${mmask(a.AccountNumber)}</td>
       <td style="font-weight:700;color:var(--accent)">${mfmt(a.Balance)}</td>
       <td>${a.InterestRate ? a.InterestRate + '%' : '—'}</td>
       <td>${fmtDate(a.LastUpdated)}</td>
       <td><span class="badge ${a.IsActive?'badge-green':'badge-red'}">${a.IsActive?'Active':'Inactive'}</span></td>
+      <td>${linkedProfile}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="editAccount(${a.AccountID})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteAccount(${a.AccountID})">Del</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('[data-profile-id]').forEach(link => {
+    link.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const profileId = ev.currentTarget.dataset.profileId;
+      if (profileId) editBankingProfile(Number(profileId));
+    });
+  });
 }
 
 function _accBankName() {
@@ -651,6 +714,8 @@ function _accBankName() {
 
 function accountForm(a = {}) {
   const isCustom = a.BankName && !BP_BANKS.find(b => b.name === a.BankName);
+  const linkMap = getLinkedProfileMap();
+  const selectedProfileId = linkMap[a.AccountID] || a.LinkedProfileID || '';
   return `
     <div class="form-row">
       <div class="form-group">
@@ -701,6 +766,14 @@ function accountForm(a = {}) {
         <input class="form-control" id="f-rate" type="number" step="0.01" value="${a.InterestRate||''}" placeholder="e.g. 3.5"/>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Linked Profile</label>
+        <select class="form-control" id="f-linked-profile">
+          <option value="">— No Linked Profile —</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group">
       <label>Notes</label>
       <textarea class="form-control" id="f-notes" rows="2">${a.Notes||''}</textarea>
@@ -714,26 +787,35 @@ function addAccount() {
     const body = { Nickname: modalVal('f-nickname'), BankName: bankName,
       AccountType: modalVal('f-type'), AccountNumber: modalVal('f-accno'),
       Balance: modalVal('f-balance'), InterestRate: modalVal('f-rate') || null,
-      Notes: modalVal('f-notes') };
-    await apiFetch('/accounts', { method: 'POST', body: JSON.stringify(body) });
-    showToast('Account added!'); closeModal(); loadAccounts();
+      Notes: modalVal('f-notes'), LinkedProfileID: modalVal('f-linked-profile') || null };
+    const created = await apiFetch('/accounts', { method: 'POST', body: JSON.stringify(body) });
+    updateLinkedProfileForAccount(created.AccountID, body.LinkedProfileID);
+    showToast('Account added!'); closeModal(); loadAccounts(); loadBankingProfiles();
   });
-  setTimeout(() => _initBankPicker('', 'acc'), 0);
+  setTimeout(() => {
+    _initBankPicker('', 'acc');
+    loadProfileOptionsForAccount('');
+  }, 0);
 }
 
 async function editAccount(id) {
   const a = await apiFetch('/accounts/' + id);
-  openModal('Edit Account', accountForm(a), 'Update Account', async () => {
+  const selectedProfileId = getLinkedProfileMap()[id] || a.LinkedProfileID || '';
+  openModal('Edit Account', accountForm({ ...a, LinkedProfileID: selectedProfileId }), 'Update Account', async () => {
     const bankName = _accBankName();
     if (!bankName) { showToast('Please select a bank.', true); return; }
     const body = { Nickname: modalVal('f-nickname'), BankName: bankName,
       AccountType: modalVal('f-type'), AccountNumber: modalVal('f-accno'),
       Balance: modalVal('f-balance'), InterestRate: modalVal('f-rate') || null,
-      Notes: modalVal('f-notes'), IsActive: 1 };
+      Notes: modalVal('f-notes'), IsActive: 1, LinkedProfileID: modalVal('f-linked-profile') || null };
     await apiFetch('/accounts/' + id, { method: 'PUT', body: JSON.stringify(body) });
-    showToast('Account updated!'); closeModal(); loadAccounts();
+    updateLinkedProfileForAccount(id, body.LinkedProfileID);
+    showToast('Account updated!'); closeModal(); loadAccounts(); loadBankingProfiles();
   });
-  setTimeout(() => _initBankPicker(a.BankName || '', 'acc'), 0);
+  setTimeout(() => {
+    _initBankPicker(a.BankName || '', 'acc');
+    loadProfileOptionsForAccount(selectedProfileId);
+  }, 0);
 }
 
 async function deleteAccount(id) {
@@ -2250,8 +2332,8 @@ async function deleteNote(id) {
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Sidebar nav
-  document.querySelectorAll('#sidebar nav a').forEach(a => {
+  // Top menu navigation
+  document.querySelectorAll('#top-menu a').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
       navigate(a.dataset.page);
@@ -2273,10 +2355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Sidebar toggle button (☰ tab on left edge)
-  el('sidebar-toggle').addEventListener('click', toggleSidebar);
-
-  // Keyboard shortcut: S toggles sidebar
+  // Keep keyboard shortcut for legacy toggle behavior
   document.addEventListener('keydown', e => {
     if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey &&
         !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
@@ -2284,9 +2363,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Start on dashboard (sidebar stays open on first load)
+  // Start on dashboard with menu active
   navigate('dashboard');
-  expandSidebar();   // keep sidebar visible on initial load
+  expandSidebar();
 });
 
 
@@ -2319,17 +2398,29 @@ async function loadBankingProfiles() {
   _injectPageVisibilityBtn('bankingprofiles');
   try {
     const profiles = await apiFetch('/bankingprofiles');
+    const accounts = await apiFetch('/accounts');
+    const linkMap = getLinkedProfileMap();
+
+    const enrichedProfiles = profiles.map(p => {
+      const matchedAccount = accounts.find(a => String(linkMap[a.AccountID] || a.LinkedProfileID || '') === String(p.ProfileID));
+      return {
+        ...p,
+        LinkedAccountID: matchedAccount ? matchedAccount.AccountID : null,
+        LinkedAccountNickname: matchedAccount ? matchedAccount.Nickname : null,
+        LinkedAccountBankName: matchedAccount ? matchedAccount.BankName : null,
+      };
+    });
 
     // Stat card
-    setText('bp-count', profiles.length);
+    setText('bp-count', enrichedProfiles.length);
 
     // Card row — non-sensitive overview per bank
     const cardsRow = el('bp-cards-row');
     if (cardsRow) {
-      if (!profiles.length) {
+      if (!enrichedProfiles.length) {
         cardsRow.innerHTML = '';
       } else {
-        cardsRow.innerHTML = profiles.map(p => {
+        cardsRow.innerHTML = enrichedProfiles.map(p => {
           const bankEntry = BP_BANKS.find(b => b.name === p.BankName);
           const logoHtml  = bankEntry ? _bpImgTag(bankEntry.favicon, 28) : `<span style="font-size:24px">🏦</span>`;
           return `
@@ -2350,13 +2441,14 @@ async function loadBankingProfiles() {
     // Detail table
     const tbody = el('bp-table-body');
     if (!tbody) return;
-    if (!profiles.length) {
-      tbody.innerHTML = `<tr><td colspan="16" style="text-align:center;padding:40px;color:var(--muted)">
+    if (!enrichedProfiles.length) {
+      tbody.innerHTML = `<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--muted)">
         No profiles yet. Click <strong>+ Add Profile</strong> to get started.</td></tr>`;
       return;
     }
-    tbody.innerHTML = profiles.map(p => `
-      <tr>
+    tbody.innerHTML = enrichedProfiles.map(p => {
+      const linkedAccount = p.LinkedAccountID ? `<a href="#" class="link-profile-account" data-account-id="${p.LinkedAccountID}" title="Open linked bank account">${p.LinkedAccountNickname || 'Linked Account'}</a>` : '—';
+      return `<tr>
         <td><strong>${p.BankName}</strong></td>
         <td>${p.Nickname}</td>
         <td><span class="badge badge-blue">${p.AccountType}</span></td>
@@ -2372,11 +2464,21 @@ async function loadBankingProfiles() {
         <td>${_bpMaskCell(p.CustomerID)}</td>
         <td>${_bpMaskCell(p.NetBankingLoginID)}</td>
         <td>${_bpMaskCell(p.NetBankingPassword)}</td>
+        <td>${linkedAccount}</td>
         <td style="white-space:nowrap">
           <button class="btn btn-ghost btn-sm" onclick="editBankingProfile(${p.ProfileID})">Edit</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteBankingProfile(${p.ProfileID})">Del</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('[data-account-id]').forEach(link => {
+      link.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const accountId = ev.currentTarget.dataset.accountId;
+        if (accountId) editAccount(Number(accountId));
+      });
+    });
   } catch (e) {
     showToast('Error loading Banking Profiles: ' + e.message, true);
   }
@@ -2400,7 +2502,7 @@ const BP_BANKS = [
   { name: 'IndusInd Bank',                ifsc: 'INDB', favicon: _gf('indusind.com') },
   { name: 'Yes Bank',                     ifsc: 'YESB', favicon: _gf('yesbank.in') },
   { name: 'IDFC First Bank',              ifsc: 'IDFB', favicon: _gf('idfcfirstbank.com') },
-  { name: 'Federal Bank',                 ifsc: 'FDRL', favicon: _gf('federalbank.co.in') },
+  { name: 'Federal Bank',                 ifsc: 'FDRL', favicon: 'https://www.federal.bank.in/images/favicon.ico' },
   { name: 'South Indian Bank',            ifsc: 'SIBL', favicon: _gf('southindianbank.com') },
   { name: 'Karnataka Bank',               ifsc: 'KARB', favicon: _gf('karnatakabank.com') },
   { name: 'Central Bank of India',        ifsc: 'CBIN', favicon: _gf('centralbankofindia.co.in') },
@@ -2424,6 +2526,12 @@ const BP_BANKS = [
 function _bpImgTag(favicon, size = 20) {
   if (!favicon) return `<span style="width:${size}px;height:${size}px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:${size*0.6}px;flex-shrink:0">🏦</span>`;
   return `<img src="${favicon}" width="${size}" height="${size}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🏦',style:'width:${size}px;height:${size}px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;flex-shrink:0'}))" loading="lazy"/>`;
+}
+
+function _bankLogoTag(bankName, size = 20) {
+  const bankEntry = BP_BANKS.find(b => b.name === bankName);
+  if (!bankEntry) return `<span style="width:${size}px;height:${size}px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:${size*0.6}px;flex-shrink:0">🏦</span>`;
+  return _bpImgTag(bankEntry.favicon, size);
 }
 
 // Renders the bank picker widget and wires it up — call after form is in DOM.

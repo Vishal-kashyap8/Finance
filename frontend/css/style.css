@@ -2,23 +2,27 @@
    Finance Tracker — Main Stylesheet
    ============================================================ */
 :root {
-  --bg:        #f0f2f5;
+  --bg:        #eef4f8;
   --surface:   #ffffff;
-  --border:    #e5e7eb;
-  --text:      #1f2328;
-  --muted:     #57606a;
+  --surface-soft: #f8fbfd;
+  --border:    #d8e2ea;
+  --text:      #122033;
+  --muted:     #607289;
   --accent:    #2563eb;
-  --accent-lt: #eff6ff;
+  --accent-lt: #eaf1ff;
+  --accent-strong: #184ebe;
   --green:     #16a34a;
-  --green-lt:  #f0fdf4;
+  --green-lt:  #eafaf0;
   --red:       #dc2626;
-  --red-lt:    #fef2f2;
+  --red-lt:    #fff0f0;
   --amber:     #d97706;
-  --amber-lt:  #fffbeb;
+  --amber-lt:  #fff8ea;
   --purple:    #7c3aed;
-  --purple-lt: #f5f3ff;
-  --sidebar-w: 220px;
-  --radius:    10px;
+  --purple-lt: #f3eeff;
+  --cyan:      #0ea5e9;
+  --sidebar-w: 240px;
+  --radius:    16px;
+  --soft-shadow: 0 20px 54px rgba(24, 61, 99, 0.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,115 +32,125 @@ body {
   font-size: 14px;
   line-height: 1.6;
   color: var(--text);
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 72% 4%, rgba(37, 99, 235, 0.08), transparent 32%),
+    radial-gradient(circle at 20% 80%, rgba(14, 165, 233, 0.08), transparent 24%),
+    var(--bg);
   display: flex;
   min-height: 100vh;
   /* Prevent body-level horizontal scroll — #main handles its own overflow */
   overflow-x: hidden;
 }
 
-/* ── SIDEBAR ── */
-#sidebar {
-  width: var(--sidebar-w);
-  background: #1e293b;
-  color: #cbd5e1;
-  display: flex;
-  flex-direction: column;
-  /* Sticky to the viewport — never scrolls horizontally with content */
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  z-index: 100;
-  /* Sidebar itself scrolls vertically if nav items overflow */
-  overflow-y: auto;
-  overflow-x: hidden;
-  transition: transform .25s ease;
-}
-
-/* ── SIDEBAR COLLAPSED ── */
-body.sidebar-collapsed #sidebar {
-  transform: translateX(calc(-1 * var(--sidebar-w)));
-}
-body.sidebar-collapsed #main {
-  margin-left: 0;
-}
-
-/* ── SIDEBAR TOGGLE BUTTON — lives in topbar, always visible ── */
-#sidebar-toggle {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1;
-  padding: 5px 9px;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-  flex-shrink: 0;
-}
-#sidebar-toggle:hover {
-  background: var(--bg);
-  color: var(--text);
-}
-#sidebar .logo {
-  padding: 22px 20px 16px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-  border-bottom: 1px solid #334155;
-  letter-spacing: -.3px;
-}
-#sidebar .logo span { color: #60a5fa; }
-/* Thin custom scrollbar for sidebar */
-#sidebar::-webkit-scrollbar { width: 4px; }
-#sidebar::-webkit-scrollbar-track { background: transparent; }
-#sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
-
-#sidebar nav { flex: 1; padding: 12px 0; }
-#sidebar nav a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  color: #94a3b8;
-  text-decoration: none;
-  font-size: 13.5px;
-  border-left: 3px solid transparent;
-  transition: all .15s;
-}
-#sidebar nav a:hover { color: #e2e8f0; background: #334155; }
-#sidebar nav a.active { color: #fff; background: #334155; border-left-color: #60a5fa; }
-#sidebar nav a .icon { width: 18px; text-align: center; font-size: 15px; }
-#sidebar .sidebar-footer {
-  padding: 14px 20px;
-  font-size: 11px;
-  color: #475569;
-  border-top: 1px solid #334155;
-}
-
-/* ── MAIN ── */
+/* ── TOP MENU ── */
 #main {
-  margin-left: var(--sidebar-w);
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  /* Main area is the scroll container — sidebar stays fixed, content scrolls freely */
   min-width: 0;
-  transition: margin-left .25s ease;
+  background: transparent;
 }
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 0;
+  color: #eefaff;
+  font-weight: 800;
+  font-size: 18px;
+  white-space: nowrap;
+}
+.brand .brand-text span {
+  color: #bfffd2;
+}
+.brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8be1fd, #105b9a);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37,99,235,0.22);
+}
+
+.top-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.top-menu a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #d9eefb;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.top-menu a .icon {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+}
+.top-menu a:hover {
+  color: #eefaff;
+  border-color: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.16);
+}
+.top-menu a.active {
+  color: #eafff4;
+  background: rgba(118, 227, 180, 0.22);
+  border-color: rgba(197,255,226,0.88);
+  box-shadow: 0 8px 18px rgba(37,99,235,0.12);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.signout-btn {
+  margin-left: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 #topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #113d72 0%, #2d8db4 100%);
+  border-bottom: 1px solid rgba(255,255,255,.12);
   padding: 14px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Sticky to the top of the viewport — stays above scrolling content */
   position: sticky;
   top: 0;
   z-index: 50;
-  /* Topbar should also not overflow when viewport is narrow */
   min-width: 0;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 22px rgba(29, 64, 91, 0.08);
 }
 #topbar h1 { font-size: 18px; font-weight: 600; }
 #topbar .topbar-right { display: flex; align-items: center; gap: 12px; }
@@ -155,7 +169,7 @@ body.sidebar-collapsed #main {
 .btn-ghost:hover    { background: var(--bg); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
-#content { padding: 28px 32px; flex: 1; }
+#content { padding: 28px 32px; flex: 1; background: transparent; }
 
 /* ── PAGE (section) ── */
 .page { display: none; }
@@ -169,15 +183,16 @@ body.sidebar-collapsed #main {
   margin-bottom: 28px;
 }
 .stat-card {
-  background: var(--surface);
+  background: linear-gradient(180deg, var(--surface), var(--surface-soft));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 22px 24px;
   transition: box-shadow .15s, transform .15s;
+  box-shadow: 0 10px 30px rgba(24,61,99,0.06);
 }
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,.07);
-  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(24,61,99,0.14);
+  transform: translateY(-4px);
 }
 .stat-card .label { font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 2px; }
 .stat-card .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
@@ -196,13 +211,14 @@ body.sidebar-collapsed #main {
   margin-bottom: 28px;
 }
 .dash-hero-card {
-  border-radius: 14px;
+  border-radius: var(--radius);
   padding: 28px 30px;
   color: #fff;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,.12);
+  box-shadow: var(--soft-shadow);
   transition: box-shadow .15s, transform .15s;
+  min-height: 170px;
 }
 .dash-hero-card:hover {
   box-shadow: 0 8px 28px rgba(0,0,0,.18);
@@ -224,20 +240,22 @@ body.sidebar-collapsed #main {
 /* ── CARD ── */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(157, 178, 195, 0.38);
   border-radius: var(--radius);
   overflow: hidden;
   transition: box-shadow .15s;
+  box-shadow: 0 12px 32px rgba(24,61,99,0.08);
 }
-.card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.card:hover { box-shadow: 0 16px 40px rgba(24,61,99,0.12); }
 .card-header {
   padding: 20px 24px 18px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: linear-gradient(180deg, var(--surface-soft), var(--surface));
 }
-.card-header h2 { font-size: 14px; font-weight: 600; }
+.card-header h2 { font-size: 14px; font-weight: 700; color: var(--text); }
 .card-body { padding: 24px; }
 
 /* ── TABLES ── */
@@ -370,23 +388,28 @@ tbody tr:hover { background: var(--bg); }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
 .page-header h2 { font-size: 20px; font-weight: 700; }
 
-/* Per-page visibility toggle button */
+/* Per-page visibility button */
 .page-vis-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  background: transparent;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background .15s, color .15s;
+  transition: all .2s ease;
 }
-.page-vis-btn:hover { background: var(--surface); color: var(--text); }
+.page-vis-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
 
 /* ── BANK PICKER (custom dropdown with logos) ── */
 .bank-picker-wrap { position: relative; }

@@ -2,6 +2,8 @@
 
 A full-stack personal finance management application — Node.js/Express backend + plain HTML/CSS/JS frontend + SQL Server database.
 
+The UI now follows a cleaner dashboard workspace model with a modern sidebar, sharp card grids, brighter financial KPIs, and a more organized page experience while preserving the same core module flows, data shapes, and application behaviors.
+
 ---
 
 ## Features

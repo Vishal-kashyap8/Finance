@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { getPool, sql } = require('../db');
+const { enrichProfilesWithAccounts } = require('./relationshipUtils');
 
 // Passphrase lives only in .env — never in source or DB
 const ENC_KEY = process.env.DB_ENCRYPT_KEY || '';
@@ -18,7 +19,7 @@ const decCol = (col) =>
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request()
+    const profileResult = await pool.request()
       .input('encKey', sql.NVarChar(500), ENC_KEY)
       .query(`
         SELECT
@@ -35,7 +36,11 @@ router.get('/', async (req, res) => {
         FROM dbo.BankingProfiles
         ORDER BY BankName, Nickname
       `);
-    res.json(result.recordset);
+
+    const accountResult = await pool.request()
+      .query(`SELECT AccountID, Nickname, BankName, AccountNumber FROM dbo.BankAccounts ORDER BY BankName, Nickname`);
+
+    res.json(enrichProfilesWithAccounts(profileResult.recordset, accountResult.recordset));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -43,7 +48,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request()
+    const profileResult = await pool.request()
       .input('id',     sql.Int,          req.params.id)
       .input('encKey', sql.NVarChar(500), ENC_KEY)
       .query(`
@@ -61,8 +66,13 @@ router.get('/:id', async (req, res) => {
         FROM dbo.BankingProfiles
         WHERE ProfileID = @id
       `);
-    if (!result.recordset.length) return res.status(404).json({ error: 'Not found' });
-    res.json(result.recordset[0]);
+    if (!profileResult.recordset.length) return res.status(404).json({ error: 'Not found' });
+
+    const accountResult = await pool.request()
+      .query(`SELECT AccountID, Nickname, BankName, AccountNumber FROM dbo.BankAccounts ORDER BY BankName, Nickname`);
+
+    const enriched = enrichProfilesWithAccounts(profileResult.recordset, accountResult.recordset);
+    res.json(enriched[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

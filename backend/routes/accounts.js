@@ -1,13 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
+const { enrichAccountsWithProfiles } = require('./relationshipUtils');
+
+const ENC_KEY = process.env.DB_ENCRYPT_KEY || '';
 
 // GET all accounts
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`SELECT * FROM dbo.BankAccounts ORDER BY BankName, Nickname`);
-    res.json(result.recordset);
+    const profileResult = await pool.request()
+      .input('encKey', sql.NVarChar(500), ENC_KEY)
+      .query(`
+        SELECT
+          ProfileID,
+          BankName,
+          Nickname,
+          CONVERT(NVARCHAR(500), DECRYPTBYPASSPHRASE(@encKey, CONVERT(VARBINARY(500), AccountNumber, 1))) AS AccountNumber
+        FROM dbo.BankingProfiles
+      `);
+    res.json(enrichAccountsWithProfiles(result.recordset, profileResult.recordset));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -19,7 +32,20 @@ router.get('/:id', async (req, res) => {
       .input('id', sql.Int, req.params.id)
       .query(`SELECT * FROM dbo.BankAccounts WHERE AccountID=@id`);
     if (!result.recordset.length) return res.status(404).json({ error: 'Not found' });
-    res.json(result.recordset[0]);
+
+    const profileResult = await pool.request()
+      .input('encKey', sql.NVarChar(500), ENC_KEY)
+      .query(`
+        SELECT
+          ProfileID,
+          BankName,
+          Nickname,
+          CONVERT(NVARCHAR(500), DECRYPTBYPASSPHRASE(@encKey, CONVERT(VARBINARY(500), AccountNumber, 1))) AS AccountNumber
+        FROM dbo.BankingProfiles
+      `);
+
+    const enriched = enrichAccountsWithProfiles(result.recordset, profileResult.recordset);
+    res.json(enriched[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

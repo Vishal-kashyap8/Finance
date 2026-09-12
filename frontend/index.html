@@ -9,66 +9,60 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════
-     SIDEBAR
-═══════════════════════════════════════════════════════════ -->
-<aside id="sidebar">
-  <div class="logo">💰 <span>Finance</span>Tracker</div>
-  <nav>
-    <a href="#" data-page="dashboard" data-label="Dashboard">
-      <span class="icon">📊</span> Dashboard
-    </a>
-    <a href="#" data-page="accounts" data-label="Bank Accounts">
-      <span class="icon">🏦</span> Bank Accounts
-    </a>
-    <a href="#" data-page="cash" data-label="Cash Holdings">
-      <span class="icon">💵</span> Cash Holdings
-    </a>
-    <a href="#" data-page="fd" data-label="Fixed Deposits">
-      <span class="icon">🏛️</span> Fixed Deposits
-    </a>
-    <a href="#" data-page="rd" data-label="Recurring Deposits">
-      <span class="icon">📅</span> Recurring Deposits
-    </a>
-    <a href="#" data-page="investments" data-label="Investments">
-      <span class="icon">📈</span> Investments
-    </a>
-    <a href="#" data-page="creditcards" data-label="Credit Cards">
-      <span class="icon">💳</span> Credit Cards
-    </a>
-    <a href="#" data-page="loans" data-label="Loans">
-      <span class="icon">🤝</span> Loans
-    </a>
-    <a href="#" data-page="transactions" data-label="Income & Expenses">
-      <span class="icon">🧾</span> Income &amp; Expenses
-    </a>
-    <a href="#" data-page="epfo" data-label="EPFO Balance">
-      <span class="icon">🏢</span> EPFO Balance
-    </a>
-    <a href="#" data-page="incometax" data-label="Income Tax">
-      <span class="icon">🧾</span> Income Tax
-    </a>
-    <a href="#" data-page="notes" data-label="Payments &amp; Notes">
-      <span class="icon">📝</span> Payments &amp; Notes
-    </a>
-    <a href="#" data-page="bankingprofiles" data-label="Banking Profiles">
-      <span class="icon">🔐</span> Banking Profiles
-    </a>
-  </nav>
-  <div class="sidebar-footer">Personal Finance Tracker v1.0</div>
-</aside>
-
-<!-- ═══════════════════════════════════════════════════════════
      MAIN
 ═══════════════════════════════════════════════════════════ -->
 <div id="main">
   <div id="topbar">
-    <div style="display:flex;align-items:center;gap:10px">
-      <button id="sidebar-toggle" title="Toggle sidebar (S)">☰</button>
-      <h1 id="topbar-title">Dashboard</h1>
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-icon">₹</span>
+        <span class="brand-text"><span>Finance</span>Tracker</span>
+      </div>
+      <nav class="top-menu" id="top-menu">
+        <a href="#" class="active" data-page="dashboard" data-label="Dashboard">
+          <span class="icon">📊</span> Dashboard
+        </a>
+        <a href="#" data-page="accounts" data-label="Bank Accounts">
+          <span class="icon">🏦</span> Bank Accounts
+        </a>
+        <a href="#" data-page="cash" data-label="Cash Holdings">
+          <span class="icon">💵</span> Cash Holdings
+        </a>
+        <a href="#" data-page="fd" data-label="Fixed Deposits">
+          <span class="icon">🏛️</span> Fixed Deposits
+        </a>
+        <a href="#" data-page="rd" data-label="Recurring Deposits">
+          <span class="icon">📅</span> Recurring Deposits
+        </a>
+        <a href="#" data-page="investments" data-label="Investments">
+          <span class="icon">📈</span> Investments
+        </a>
+        <a href="#" data-page="creditcards" data-label="Credit Cards">
+          <span class="icon">💳</span> Credit Cards
+        </a>
+        <a href="#" data-page="loans" data-label="Loans">
+          <span class="icon">🤝</span> Loans
+        </a>
+        <a href="#" data-page="transactions" data-label="Income &amp; Expenses">
+          <span class="icon">🧾</span> Income &amp; Expenses
+        </a>
+        <a href="#" data-page="epfo" data-label="EPFO Balance">
+          <span class="icon">🏢</span> EPFO Balance
+        </a>
+        <a href="#" data-page="incometax" data-label="Income Tax">
+          <span class="icon">🧾</span> Income Tax
+        </a>
+        <a href="#" data-page="notes" data-label="Payments &amp; Notes">
+          <span class="icon">📝</span> Payments &amp; Notes
+        </a>
+        <a href="#" data-page="bankingprofiles" data-label="Banking Profiles">
+          <span class="icon">🔐</span> Banking Profiles
+        </a>
+      </nav>
     </div>
     <div class="topbar-right">
       <span style="font-size:12px;color:var(--muted)" id="topbar-date"></span>
-      <button onclick="logout()" style="margin-left:8px;padding:5px 12px;background:transparent;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;cursor:pointer;color:#57606a;">Sign Out</button>
+      <button onclick="logout()" class="btn btn-ghost btn-sm signout-btn">Sign Out</button>
     </div>
   </div>
 
@@ -278,7 +272,7 @@
             <thead>
               <tr>
                 <th>Nickname</th><th>Bank</th><th>Type</th><th>Account No.</th>
-                <th>Balance</th><th>Interest</th><th>Last Updated</th><th>Status</th><th>Actions</th>
+                <th>Balance</th><th>Interest</th><th>Last Updated</th><th>Status</th><th>Linked Profile</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="accounts-table-body"></tbody>
@@ -804,6 +798,7 @@
                 <th>Customer ID</th>
                 <th>NB Username</th>
                 <th>NB Password</th>
+                <th>Linked Account</th>
                 <th>Actions</th>
               </tr>
             </thead>
