@@ -186,7 +186,14 @@ body {
 .btn-ghost:hover    { background: var(--bg); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
-#content { padding: 28px 32px; flex: 1; background: transparent; }
+#content {
+  padding: 28px 32px;
+  flex: 1;
+  background: transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
 
 /* ── PAGE (section) ── */
 .page { display: none; }

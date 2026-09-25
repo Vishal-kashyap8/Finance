@@ -127,9 +127,9 @@ function showToast(msg, isError = false) {
 }
 
 // ── Top menu navigation helpers (kept for compatibility) ─────────────────────────────────
-function collapseSidebar()  { document.body.classList.add('sidebar-collapsed'); }
+function collapseSidebar()  { document.body.classList.remove('sidebar-collapsed'); }
 function expandSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
-function toggleSidebar()    { document.body.classList.toggle('sidebar-collapsed'); }
+function toggleSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
 
 // ── Navigation ────────────────────────────────────────────────
 function navigate(pageId) {
@@ -145,8 +145,8 @@ function navigate(pageId) {
   // Auto-hide values on the page being left before switching
   _pageVisible[_currentPage] = false;
   _currentPage = pageId;
-  // Keep the current page width consistent with the new top-menu layout
-  expandSidebar();
+  // Collapse the sidebar after a selection so the content area gets full width
+  collapseSidebar();
   loadPage(pageId);
 }
 
