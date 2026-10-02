@@ -60,6 +60,37 @@ router.get('/', async (req, res) => {
       SELECT TOP 6 Yr, Mo, TotalIncome, TotalExpense, NetSavings
       FROM dbo.vw_MonthlyFlow ORDER BY Yr DESC, Mo DESC`);
 
+    const trendMonthMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(req.query.expenseTrendMonth || '');
+    const trendYear = trendMonthMatch ? Number(trendMonthMatch[1]) : new Date().getFullYear();
+    const trendMonth = trendMonthMatch ? Number(trendMonthMatch[2]) : new Date().getMonth() + 1;
+    const expenseDailyTrend = await safeQuery(pool, `
+      SELECT CONVERT(varchar(10), CAST(TransactionDate AS date), 23) AS ExpenseDate,
+             SUM(Amount) AS TotalExpense
+      FROM dbo.Transactions
+      WHERE Type = 'Expense'
+        AND TransactionDate >= DATEFROMPARTS(${trendYear}, ${trendMonth}, 1)
+        AND TransactionDate < DATEADD(MONTH, 1, DATEFROMPARTS(${trendYear}, ${trendMonth}, 1))
+      GROUP BY CAST(TransactionDate AS date)
+      ORDER BY CAST(TransactionDate AS date)`);
+    const expenseMonthlyAverage = await safeQuery(pool, `
+      SELECT YEAR(TransactionDate) AS Yr, MONTH(TransactionDate) AS Mo,
+             SUM(Amount) AS TotalExpense,
+             CASE
+               WHEN YEAR(TransactionDate) = YEAR(GETDATE()) AND MONTH(TransactionDate) = MONTH(GETDATE())
+                 THEN DAY(GETDATE())
+               ELSE DAY(EOMONTH(TransactionDate))
+             END AS DaysCount
+      FROM dbo.Transactions
+      WHERE Type = 'Expense'
+        AND TransactionDate >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+      GROUP BY YEAR(TransactionDate), MONTH(TransactionDate),
+               CASE
+                 WHEN YEAR(TransactionDate) = YEAR(GETDATE()) AND MONTH(TransactionDate) = MONTH(GETDATE())
+                   THEN DAY(GETDATE())
+                 ELSE DAY(EOMONTH(TransactionDate))
+               END
+      ORDER BY Yr, Mo`);
+
     // FD maturity alerts
     const fdAlerts = await safeQuery(pool, `SELECT * FROM dbo.vw_FDMaturityAlert ORDER BY DaysToMaturity`);
 
@@ -179,6 +210,9 @@ router.get('/', async (req, res) => {
       netWorthTrend:    trendRows,
       netWorthBreakdown: netWorthRows,
       monthlyFlow:      monthlyFlowRows.reverse(),
+      expenseTrendMonth: `${trendYear}-${String(trendMonth).padStart(2, '0')}`,
+      expenseDailyTrend,
+      expenseMonthlyAverage,
       fdAlerts,
       rdAlerts,
       expenseBreakdown: expBreakdown,

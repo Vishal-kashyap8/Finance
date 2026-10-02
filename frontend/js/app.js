@@ -55,6 +55,7 @@ const fmtDateInput = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
 // Each page key maps to true (visible) or false (masked, default).
 const _pageVisible = {};
 let   _currentPage = 'dashboard';
+let   _expenseTrendData = null;
 
 const SVG_EYE_OFF = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 const SVG_EYE_ON  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
@@ -189,7 +190,15 @@ function modalVal(id) { const e = el(id); return e ? e.value : ''; }
 async function loadDashboard() {
   _injectPageVisibilityBtn('dashboard');
   try {
-    const d = await apiFetch('/dashboard');
+    const expenseMonthInput = el('dash-expense-average-month');
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (expenseMonthInput) {
+      expenseMonthInput.max = currentMonth;
+      if (expenseMonthInput.value > currentMonth) expenseMonthInput.value = currentMonth;
+    }
+    const requestedMonth = expenseMonthInput?.value;
+    const d = await apiFetch('/dashboard' + (requestedMonth ? '?expenseTrendMonth=' + encodeURIComponent(requestedMonth) : ''));
     renderNetWorth(d);
     renderBankCards(d.bankAccounts);
     renderMonthlyChart(d.monthlyFlow);
@@ -197,6 +206,10 @@ async function loadDashboard() {
     renderFDAlerts(d.fdAlerts);
     renderRDAlerts(d.rdAlerts);
     renderExpenseDonut(d.expenseBreakdown);
+    _expenseTrendData = d;
+    const trendMonth = el('dash-expense-average-month');
+    if (trendMonth && !trendMonth.value) trendMonth.value = d.expenseTrendMonth;
+    renderExpenseAverage(d);
     renderRecentTx(d.recentTransactions);
     renderQuickStats(d);
     renderPendingActions(d.pendingActions || []);
@@ -502,6 +515,79 @@ async function refreshExpenseDonut() {
     const d = await apiFetch(url);
     renderExpenseDonut(d.expenseBreakdown, month);
   } catch (e) { showToast(e.message, true); }
+}
+
+async function refreshExpenseAverage() {
+  const month = el('dash-expense-average-month')?.value || '';
+  if (!month) return;
+  try {
+    _expenseTrendData = await apiFetch('/dashboard?expenseTrendMonth=' + encodeURIComponent(month));
+    renderExpenseAverage(_expenseTrendData);
+  } catch (e) { showToast(e.message, true); }
+}
+
+function renderExpenseAverage(data) {
+  const chart = el('dash-expense-average-chart');
+  const level = el('dash-expense-average-level')?.value || 'day';
+  const monthInput = el('dash-expense-average-month');
+  const averageValue = el('dash-expense-average-value');
+  const valuesVisible = !!_pageVisible[_currentPage];
+  if (!chart || !data) return;
+  if (monthInput) monthInput.style.display = level === 'day' ? '' : 'none';
+
+  let bars;
+  let average;
+  if (level === 'month') {
+    const now = new Date();
+    const monthlyRows = new Map((data.expenseMonthlyAverage || []).map(row => [`${row.Yr}-${row.Mo}`, row]));
+    bars = Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+      const row = monthlyRows.get(`${date.getFullYear()}-${date.getMonth() + 1}`);
+      const amount = Number(row?.TotalExpense || 0);
+      const days = Number(row?.DaysCount || new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate());
+      return {
+        label: date.toLocaleString('en-IN', { month: 'short' }),
+        value: days ? amount / days : 0,
+        title: valuesVisible
+          ? `${date.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}: ${fmt(days ? amount / days : 0)} per day`
+          : `${date.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}: values hidden`,
+      };
+    });
+    average = bars.length ? bars.reduce((sum, bar) => sum + bar.value, 0) / bars.length : 0;
+  } else {
+    const selectedMonth = monthInput?.value || data.expenseTrendMonth;
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const today = new Date();
+    const daysToShow = year === today.getFullYear() && month === today.getMonth() + 1
+      ? today.getDate()
+      : daysInMonth;
+    const byDate = new Map((data.expenseDailyTrend || []).map(row => [String(row.ExpenseDate).slice(0, 10), Number(row.TotalExpense || 0)]));
+    bars = Array.from({ length: daysToShow }, (_, index) => {
+      const day = index + 1;
+      const dateKey = `${selectedMonth}-${String(day).padStart(2, '0')}`;
+      const value = byDate.get(dateKey) || 0;
+      return {
+        label: day % 5 === 1 || day === daysToShow ? String(day) : '',
+        value,
+        title: valuesVisible ? `Day ${day}: ${fmt(value)}` : `Day ${day}: values hidden`,
+      };
+    });
+    const total = bars.reduce((sum, bar) => sum + bar.value, 0);
+    average = daysToShow ? total / daysToShow : 0;
+  }
+
+  if (averageValue) averageValue.innerHTML = `Average: ${mfmt(average)} / day`;
+  if (!bars.length) {
+    chart.innerHTML = '<p class="empty">No expenses for this period.</p>';
+    return;
+  }
+  const maxValue = Math.max(...bars.map(bar => bar.value), 1);
+  chart.innerHTML = bars.map(bar => `
+    <div class="expense-average-bar-wrap" title="${bar.title}">
+      <div class="expense-average-bar" style="height:${Math.round((bar.value / maxValue) * 124)}px"></div>
+      <span>${bar.label}</span>
+    </div>`).join('');
 }
 
 function renderExpenseDonut(breakdown, month) {
@@ -1356,7 +1442,7 @@ function renderTransactionsTable(txs) {
       : t.PaymentSource === 'Bank Account'
       ? `<span class="badge badge-blue">${t.LinkedAccountName || 'Bank'}</span>`
       : t.PaymentSource
-      ? `<span class="badge badge-purple">${src}</span>`
+      ? `<span style="display:inline-flex;gap:4px;align-items:center"><span class="badge badge-purple">${src}</span>${t.LinkedAccountName ? `<span class="badge badge-blue">${t.LinkedAccountName}</span>` : ''}</span>`
       : `<span style="color:var(--muted)">—</span>`;
     return `<tr>
       <td>${fmtDate(t.TransactionDate)}</td>
@@ -1398,7 +1484,7 @@ async function txForm(t = {}, type = 'Expense') {
     <div class="form-row">
       <div class="form-group">
         <label>Type *</label>
-        <select class="form-control" id="f-type" onchange="refreshTxCategories(this.value)">
+        <select class="form-control" id="f-type" onchange="refreshTxCategories(this.value); toggleTxSource(el('f-source').value)">
           <option ${activeType==='Income'?'selected':''}>Income</option>
           <option ${activeType==='Expense'?'selected':''}>Expense</option>
         </select>
@@ -1426,8 +1512,8 @@ async function txForm(t = {}, type = 'Expense') {
         ${srcOptions}
       </select>
     </div>
-    <div id="f-account-row" class="form-group" style="display:${t.PaymentSource==='Bank Account'?'block':'none'}">
-      <label>Bank Account</label>
+    <div id="f-account-row" class="form-group" style="display:${t.PaymentSource==='Bank Account' || (activeType==='Income' && t.PaymentSource!=='Credit Card')?'block':'none'}">
+      <label id="f-account-label">${activeType === 'Income' ? 'Received in account (optional)' : 'Bank Account'}</label>
       <select class="form-control" id="f-account">
         <option value="">— Select account —</option>
         ${accountOptions}
@@ -1449,7 +1535,11 @@ async function txForm(t = {}, type = 'Expense') {
 function toggleTxSource(val) {
   const aRow = el('f-account-row');
   const cRow = el('f-card-row');
-  if (aRow) aRow.style.display = val === 'Bank Account' ? 'block' : 'none';
+  const isIncome = modalVal('f-type') === 'Income';
+  const showAccount = val === 'Bank Account' || (isIncome && val !== 'Credit Card');
+  if (aRow) aRow.style.display = showAccount ? 'block' : 'none';
+  const accountLabel = el('f-account-label');
+  if (accountLabel) accountLabel.textContent = isIncome ? 'Received in account (optional)' : 'Bank Account';
   if (cRow) cRow.style.display = val === 'Credit Card'  ? 'block' : 'none';
 }
 
@@ -1462,14 +1552,17 @@ function refreshTxCategories(type) {
 
 function txBody() {
   const src = modalVal('f-source');
+  const type = modalVal('f-type');
   return {
-    Type:            modalVal('f-type'),
+    Type:            type,
     CategoryID:      modalVal('f-cat'),
     Amount:          modalVal('f-amount'),
     TransactionDate: modalVal('f-date'),
     Description:     modalVal('f-desc'),
     PaymentSource:   src || null,
-    LinkedAccountID: src === 'Bank Account' ? (modalVal('f-account') || null) : null,
+    LinkedAccountID: src === 'Bank Account' || (type === 'Income' && src !== 'Credit Card')
+      ? (modalVal('f-account') || null)
+      : null,
     LinkedCardID:    src === 'Credit Card'  ? (modalVal('f-card')    || null) : null,
   };
 }

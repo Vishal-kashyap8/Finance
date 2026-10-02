@@ -5,19 +5,19 @@ function sourceEffect(tx) {
   const amount = Number(tx.Amount || 0);
   if (!amount) return null;
 
-  if (tx.PaymentSource === 'Bank Account' && tx.LinkedAccountID) {
-    return {
-      table: 'BankAccounts',
-      id: Number(tx.LinkedAccountID),
-      delta: tx.Type === 'Income' ? amount : -amount,
-    };
-  }
-
   if (tx.PaymentSource === 'Credit Card' && tx.LinkedCardID) {
     return {
       table: 'CreditCards',
       id: Number(tx.LinkedCardID),
       delta: tx.Type === 'Income' ? -amount : amount,
+    };
+  }
+
+  if (tx.LinkedAccountID && (tx.Type === 'Income' || tx.PaymentSource === 'Bank Account')) {
+    return {
+      table: 'BankAccounts',
+      id: Number(tx.LinkedAccountID),
+      delta: tx.Type === 'Income' ? amount : -amount,
     };
   }
 
@@ -68,7 +68,9 @@ function txFromBody(body) {
     TransactionDate,
     Description,
     PaymentSource: PaymentSource || null,
-    LinkedAccountID: PaymentSource === 'Bank Account' ? (LinkedAccountID || null) : null,
+    LinkedAccountID: PaymentSource === 'Bank Account' || (Type === 'Income' && PaymentSource !== 'Credit Card')
+      ? (LinkedAccountID || null)
+      : null,
     LinkedCardID: PaymentSource === 'Credit Card' ? (LinkedCardID || null) : null,
   };
 }

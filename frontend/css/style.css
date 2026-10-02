@@ -390,6 +390,10 @@ tbody tr:hover { background: var(--bg); }
 .mini-bar.expense { background: var(--red); }
 .mini-chart-labels { display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
 .mini-chart-labels span { font-size: 11px; color: var(--muted); flex: 1; text-align: center; font-weight: 500; }
+.expense-average-chart { display: flex; align-items: flex-end; gap: 5px; min-height: 154px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+.expense-average-bar-wrap { flex: 1 0 18px; min-width: 18px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 154px; }
+.expense-average-bar { width: min(70%, 24px); min-height: 2px; background: var(--red); border-radius: 3px 3px 0 0; }
+.expense-average-bar-wrap span { height: 20px; padding-top: 4px; font-size: 10px; color: var(--muted); }
 
 /* ── NET WORTH BARS ── */
 .nw-bar-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }

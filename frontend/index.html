@@ -225,6 +225,26 @@
         </div>
       </div>
 
+      <div style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <h2>Average Daily Expenses</h2>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span id="dash-expense-average-value" style="font-size:13px;font-weight:600;color:var(--red)"></span>
+              <select id="dash-expense-average-level" class="form-control" style="width:110px;padding:5px 8px" onchange="renderExpenseAverage(_expenseTrendData)">
+                <option value="day">By day</option>
+                <option value="month">By month</option>
+              </select>
+              <input type="month" id="dash-expense-average-month" class="form-control"
+                style="width:148px;font-size:12px;padding:4px 8px" onchange="refreshExpenseAverage()"/>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="dash-expense-average-chart" class="expense-average-chart"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Row 3: Bank Accounts + Recent Transactions -->
       <div class="grid-2" style="margin-bottom:20px">
         <div class="card">
