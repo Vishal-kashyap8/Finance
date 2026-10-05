@@ -17,6 +17,10 @@ variables:
   webAppName: 'finance-app-001'
   sqlServerName: 'finance-sql-server-001'
   databaseName: 'FinanceTracker'
+  terraformStateResourceGroup: 'SQL_DevOps_Vishal'
+  terraformStateStorageAccount: 'devops3344'
+  terraformStateContainer: 'terraform1'
+  terraformStateKey: 'prod.terraform.tfstate'
   terraformVersion: '1.9.5'
   terraformWorkingDirectory: '$(Build.SourcesDirectory)/Infrastructure'
   appPackagePath: '$(Build.SourcesDirectory)/finance-app.zip'
@@ -52,18 +56,31 @@ stages:
               azureSubscription: $(azureSubscription)
               scriptType: bash
               scriptLocation: inlineScript
+              addSpnToEnvironment: true
               inlineScript: |
                 set -euo pipefail
-                export ARM_USE_CLI=true
                 export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+                export ARM_CLIENT_ID="$servicePrincipalId"
+                export ARM_TENANT_ID="$tenantId"
+                export ARM_USE_CLI=false
+                export ARM_USE_OIDC=false
+                if [[ -n "${servicePrincipalKey:-}" ]]; then
+                  export ARM_CLIENT_SECRET="$servicePrincipalKey"
+                  backend_use_oidc=false
+                else
+                  export ARM_USE_OIDC=true
+                  export ARM_OIDC_TOKEN="${idToken:?Missing workload identity federation token}"
+                  backend_use_oidc=true
+                fi
 
                 cd "$(terraformWorkingDirectory)"
                 terraform init -input=false -reconfigure \
-                  -backend-config="resource_group_name=$(SQL_DevOps_Vishal)" \
-                  -backend-config="storage_account_name=$(devops3344)" \
-                  -backend-config="container_name=terraform1" \
-                  -backend-config="key=prod.terraform.tfstate" \
-                  -backend-config="use_azuread_auth=true"
+                  -backend-config="resource_group_name=$(terraformStateResourceGroup)" \
+                  -backend-config="storage_account_name=$(terraformStateStorageAccount)" \
+                  -backend-config="container_name=$(terraformStateContainer)" \
+                  -backend-config="key=$(terraformStateKey)" \
+                  -backend-config="use_azuread_auth=true" \
+                  -backend-config="use_oidc=$backend_use_oidc"
                 terraform validate
                 terraform plan -input=false -var="subscription_id=$ARM_SUBSCRIPTION_ID" -out=tfplan
             env:
@@ -76,10 +93,20 @@ stages:
               azureSubscription: $(azureSubscription)
               scriptType: bash
               scriptLocation: inlineScript
+              addSpnToEnvironment: true
               inlineScript: |
                 set -euo pipefail
-                export ARM_USE_CLI=true
                 export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+                export ARM_CLIENT_ID="$servicePrincipalId"
+                export ARM_TENANT_ID="$tenantId"
+                export ARM_USE_CLI=false
+                export ARM_USE_OIDC=false
+                if [[ -n "${servicePrincipalKey:-}" ]]; then
+                  export ARM_CLIENT_SECRET="$servicePrincipalKey"
+                else
+                  export ARM_USE_OIDC=true
+                  export ARM_OIDC_TOKEN="${idToken:?Missing workload identity federation token}"
+                fi
 
                 cd "$(terraformWorkingDirectory)"
                 terraform apply -input=false -auto-approve tfplan
