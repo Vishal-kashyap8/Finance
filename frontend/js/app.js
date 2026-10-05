@@ -127,10 +127,29 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── Top menu navigation helpers (kept for compatibility) ─────────────────────────────────
-function collapseSidebar()  { document.body.classList.remove('sidebar-collapsed'); }
-function expandSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
-function toggleSidebar()    { document.body.classList.remove('sidebar-collapsed'); }
+// ── Sidebar navigation helpers ─────────────────────────────────
+function _setSidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  const sidebar = el('topbar');
+  const toggle = el('sidebar-toggle');
+  const icon = el('sidebar-toggle-icon');
+  if (sidebar) {
+    sidebar.inert = collapsed;
+    sidebar.setAttribute('aria-hidden', String(collapsed));
+  }
+  if (toggle) {
+    const label = collapsed ? 'Show navigation' : 'Hide navigation';
+    toggle.setAttribute('aria-label', label);
+    toggle.setAttribute('title', label);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+  }
+  if (icon) icon.textContent = collapsed ? '☰' : '‹';
+}
+function collapseSidebar() { _setSidebarCollapsed(true); }
+function expandSidebar() { _setSidebarCollapsed(false); }
+function toggleSidebar() {
+  _setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+}
 
 // ── Navigation ────────────────────────────────────────────────
 function navigate(pageId) {
@@ -146,8 +165,8 @@ function navigate(pageId) {
   // Auto-hide values on the page being left before switching
   _pageVisible[_currentPage] = false;
   _currentPage = pageId;
-  // Collapse the sidebar after a selection so the content area gets full width
-  collapseSidebar();
+  // Close the drawer after selection on small screens; keep desktop navigation open.
+  if (window.matchMedia('(max-width: 760px)').matches) collapseSidebar();
   loadPage(pageId);
 }
 
@@ -1664,9 +1683,10 @@ function renderCreditCards(cards) {
   tbody.innerHTML = cards.map(c => {
     const pct   = parseFloat(c.UtilisationPct || 0);
     const color = pct >= 80 ? 'var(--red)' : pct >= 50 ? 'var(--amber)' : 'var(--green)';
+    const bankLogo = _bankLogoTag(c.BankName, 20);
     return `<tr>
       <td><strong>${c.Nickname}</strong>${c.LastFourDigits ? '<br><span style="font-size:11px;color:var(--muted)">**** '+mmask(c.LastFourDigits)+'</span>' : ''}</td>
-      <td>${c.BankName}</td>
+      <td style="white-space:nowrap">${bankLogo}<span style="margin-left:8px">${c.BankName}</span></td>
       <td><span class="badge badge-blue">${c.CardNetwork}</span></td>
       <td style="font-weight:600">${mfmt(c.CreditLimit)}</td>
       <td style="font-weight:700;color:var(--red)">${mfmt(c.OutstandingAmt)}</td>
@@ -1694,6 +1714,7 @@ function renderCreditCards(cards) {
 
 function ccForm(c = {}) {
   const networks = ['Visa','Mastercard','Rupay','Amex','Diners'];
+  const isCustom = c.BankName && !BP_BANKS.find(b => b.name === c.BankName);
   return `
     <div class="form-row">
       <div class="form-group">
@@ -1702,7 +1723,23 @@ function ccForm(c = {}) {
       </div>
       <div class="form-group">
         <label>Bank Name *</label>
-        <input class="form-control" id="f-bank" value="${c.BankName||''}" placeholder="e.g. HDFC Bank" required/>
+        <input type="hidden" id="cc-BankName" value="${c.BankName||''}"/>
+        <div class="bank-picker-wrap" id="cc-bank-picker-wrap">
+          <button type="button" class="bank-picker-trigger" id="cc-bank-trigger">
+            <span class="bank-picker-placeholder">Select a bank…</span>
+            <span class="bp-chevron">▼</span>
+          </button>
+          <div class="bank-picker-dropdown" id="cc-bank-dropdown">
+            <div class="bank-picker-search">
+              <input id="cc-bank-search" placeholder="Search banks…" autocomplete="off"/>
+            </div>
+            <div class="bank-picker-list" id="cc-bank-list"></div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px;display:${isCustom ? '' : 'none'}" id="cc-custom-bank-row">
+          <label style="font-size:11px">Custom bank name *</label>
+          <input id="cc-BankNameCustom" class="form-control" value="${isCustom ? (c.BankName||'') : ''}" placeholder="Type bank name"/>
+        </div>
       </div>
     </div>
     <div class="form-row">
@@ -1763,10 +1800,18 @@ function ccForm(c = {}) {
     </div>`;
 }
 
+function _ccBankName() {
+  const hidden = (document.getElementById('cc-BankName') || {}).value?.trim() || '';
+  const custom = (document.getElementById('cc-BankNameCustom') || {}).value?.trim() || '';
+  return hidden || custom;
+}
+
 function addCreditCard() {
   openModal('Add Credit Card', ccForm(), 'Save Card', async () => {
+    const bankName = _ccBankName();
+    if (!bankName) { showToast('Please select a bank.', true); return; }
     const body = {
-      Nickname: modalVal('f-nickname'), BankName: modalVal('f-bank'),
+      Nickname: modalVal('f-nickname'), BankName: bankName,
       CardNetwork: modalVal('f-network'), LastFourDigits: modalVal('f-digits') || null,
       CreditLimit: modalVal('f-limit'), OutstandingAmt: modalVal('f-outstanding'),
       MinimumDue: modalVal('f-mindue'), AnnualFee: modalVal('f-annualfee'),
@@ -1777,13 +1822,16 @@ function addCreditCard() {
     await apiFetch('/creditcards', { method: 'POST', body: JSON.stringify(body) });
     showToast('Credit card added!'); closeModal(); loadCreditCards();
   });
+  setTimeout(() => _initBankPicker('', 'cc'), 0);
 }
 
 async function editCreditCard(id) {
   const c = await apiFetch('/creditcards/' + id);
   openModal('Edit Credit Card', ccForm(c), 'Update Card', async () => {
+    const bankName = _ccBankName();
+    if (!bankName) { showToast('Please select a bank.', true); return; }
     const body = {
-      Nickname: modalVal('f-nickname'), BankName: modalVal('f-bank'),
+      Nickname: modalVal('f-nickname'), BankName: bankName,
       CardNetwork: modalVal('f-network'), LastFourDigits: modalVal('f-digits') || null,
       CreditLimit: modalVal('f-limit'), OutstandingAmt: modalVal('f-outstanding'),
       MinimumDue: modalVal('f-mindue'), AnnualFee: modalVal('f-annualfee'),
@@ -1794,6 +1842,7 @@ async function editCreditCard(id) {
     await apiFetch('/creditcards/' + id, { method: 'PUT', body: JSON.stringify(body) });
     showToast('Card updated!'); closeModal(); loadCreditCards();
   });
+  setTimeout(() => _initBankPicker(c.BankName || '', 'cc'), 0);
 }
 
 async function deleteCreditCard(id) {
@@ -2425,13 +2474,14 @@ async function deleteNote(id) {
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Top menu navigation
+  // Sidebar navigation
   document.querySelectorAll('#top-menu a').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
       navigate(a.dataset.page);
     });
   });
+  el('sidebar-backdrop').addEventListener('click', collapseSidebar);
 
   // Modal close
   el('modal-close-btn').addEventListener('click', closeModal);
@@ -2456,9 +2506,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Start on dashboard with menu active
+  // Start on dashboard with navigation available and keep mobile content unobstructed.
+  if (window.matchMedia('(max-width: 760px)').matches) collapseSidebar();
+  else expandSidebar();
   navigate('dashboard');
-  expandSidebar();
 });
 
 

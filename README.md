@@ -10,15 +10,15 @@ The UI now follows a cleaner dashboard workspace model with a modern sidebar, sh
 
 | Module | What you can track |
 |---|---|
-| 📊 Dashboard | Hero net worth + liabilities panel, asset breakdown, **net worth trend chart (6 months)**, FD/RD maturity alerts (🔔), monthly income vs expense chart, expense donut, recent transactions, **Reminders & Todos action card** |
+| 📊 Dashboard | Hero net worth + liabilities panel, asset breakdown, **net worth trend chart (6 months)**, FD/RD maturity alerts (🔔), monthly income vs expense chart, expense donut, **daily/monthly average expense chart**, recent transactions, **Reminders & Todos action card** |
 | 🏦 Bank Accounts | Savings & Current accounts across multiple banks — balance, interest rate, **masked account number** |
 | 💵 Cash Holdings | Cash in hand, wallets, emergency cash by category |
 | 🏛️ Fixed Deposits | Bank, principal, rate, start/maturity dates, maturity amount, status, maturity alerts |
 | 📅 Recurring Deposits | Monthly installment, installments paid/remaining, expected maturity amount, maturity alerts |
 | 📈 Investments | Mutual Funds, Stocks, PPF, NPS, Gold, Bonds, ETFs — invested vs current value, gain/loss |
-| 💳 Credit Cards | Multiple cards — credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits**, **edit directly from card tile** |
+| 💳 Credit Cards | Multiple cards — searchable bank picker with logos and custom bank option, bank logos in the table, credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits**, **edit directly from card tile** |
 | 🤝 Loans | Money borrowed (you owe) and money lent (others owe you) — principal, outstanding, interest, due dates |
-| 🧾 Income & Expenses | Categorised income and expense transactions with **Date, Type, Category, and Paid Via column filters** |
+| 🧾 Income & Expenses | Categorised income and expense transactions with **Date, Type, Category, and Paid Via column filters**; income can optionally be linked to a receiving bank account |
 | 🏢 EPFO Balance | Employee Provident Fund accounts — **masked UAN**, employer, balance |
 | 🧾 Income Tax | Year-wise tax records — gross income, taxable income, TDS, advance tax, self-assessment tax, interest & fee payable, refunds, filing status |
 | 📝 Payments & Notes | Payment reminders, todos, notes and reminders — title, type, priority, due date, amount, tags, free-text body |
@@ -45,15 +45,20 @@ All financial values and sensitive identity fields are **hidden by default**. Ea
 
 ---
 
-## Sidebar Auto-Collapse
+## Navigation Sidebar
 
-Clicking any section in the sidebar automatically hides the sidebar so the page content uses the full browser width.
+The app uses a vertical sidebar for page navigation. Use the menu button in the header to hide it and expand the current page to the available width. On desktop, the sidebar stays open when you switch pages; on smaller screens it opens as a drawer and closes after a page is selected. Click the backdrop to dismiss the mobile drawer.
 
 | Action | Result |
 |---|---|
-| Click a sidebar section | Sidebar slides away, page expands to full width |
-| Click **☰** in the topbar | Sidebar slides back |
-| Press **`S`** (when not in a text field) | Toggles sidebar open/closed |
+| Click the header menu button | Hides or shows the sidebar |
+| Select a page on desktop | Changes page while leaving the sidebar open |
+| Select a page on a small screen | Changes page and closes the drawer |
+| Press **`S`** (when not in a text field) | Toggles sidebar visibility |
+
+## Credit Card Bank Selection
+
+When adding or editing a credit card, choose from the searchable bank picker, which displays bank logos. Select **Other / Custom** to enter a bank that is not in the built-in list. The credit-card table also displays the corresponding bank logo beside the bank name.
 
 ---
 
@@ -261,7 +266,7 @@ Finance/
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/auth/login` | Authenticate with PIN (`{ pin }`) |
+| POST | `/api/auth/login` | Authenticate with username and password (`{ username, password }`) |
 | POST | `/api/auth/logout` | Clear server session |
 
 ### Dashboard
@@ -536,6 +541,13 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 ---
 
 ## Changelog
+
+### v1.8 — Sidebar, Dashboard & Credit Card Updates
+- **Vertical, collapsible navigation** — the header menu button hides or restores the sidebar. Desktop page changes leave navigation open; on smaller screens, the sidebar is a drawer that closes after selection or when its backdrop is clicked. The `S` shortcut still toggles it.
+- **Updated app header** — the menu control, date area, and Sign Out action are in the main content header, independently of sidebar visibility.
+- **Credit card bank picker and logos** — add and edit forms use a searchable bank picker with logos and a custom-bank option; the table shows each bank logo beside its name.
+- **Average daily expenses** — the dashboard chart can show daily expenses for a selected month or average expense per day by month, and follows the page's value-visibility setting.
+- **Income and bank account linking** — income can optionally be assigned to a receiving account; linked income and bank-account expenses adjust the corresponding account balance.
 
 ### v1.7 — Bank Picker with Logos
 - **🏦 Searchable bank picker** — the Bank Name field in Banking Profiles is now a custom dropdown listing 30 major Indian banks with their actual logos (favicons loaded directly from each bank's website — no local assets). Type to filter, click to select.
