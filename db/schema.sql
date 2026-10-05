@@ -1,19 +1,7 @@
 -- ============================================================
 -- Personal Finance Tracker - SQL Server Schema
--- Run this script once against your local SQL Server instance
+-- Connect to the FinanceTracker database before running this script.
 -- ============================================================
-
-USE master;
-GO
-
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'FinanceTracker')
-BEGIN
-    CREATE DATABASE FinanceTracker;
-END
-GO
-
-USE FinanceTracker;
-GO
 
 -- ============================================================
 -- 1. BANK ACCOUNTS (Savings / Current)

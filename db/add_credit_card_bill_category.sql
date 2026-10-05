@@ -1,9 +1,6 @@
 -- ============================================================
 -- Run in SSMS: Adds Credit Card Bill to expense categories
 -- ============================================================
-USE FinanceTracker;
-GO
-
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.TransactionCategories

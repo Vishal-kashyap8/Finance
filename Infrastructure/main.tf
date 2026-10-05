@@ -1,4 +1,6 @@
 terraform {
+  backend "azurerm" {}
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -37,6 +39,21 @@ resource "azurerm_service_plan" "app_service_plan" {
   }
 }
 
+resource "azurerm_mssql_server" "sql_server" {
+  name                         = var.sql_server_name
+  resource_group_name          = azurerm_resource_group.rg.name
+  location                     = azurerm_resource_group.rg.location
+  version                      = "12.0"
+  administrator_login          = var.sql_admin_username
+  administrator_login_password = var.sql_admin_password
+  minimum_tls_version          = "1.2"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
 # Create App Service
 resource "azurerm_linux_web_app" "app_service" {
   name                = var.app_service_name
@@ -46,11 +63,11 @@ resource "azurerm_linux_web_app" "app_service" {
 
   site_config {
     minimum_tls_version = "1.2"
-    always_on           = false  # Free tier doesn't support always_on
-    
-    # Application stack (Node.js example - adjust as needed)
+    always_on           = false # Free tier doesn't support always_on
+
+    # Keep this aligned with the Node version used by the deployment pipeline.
     application_stack {
-      node_version = "20-lts"
+      node_version = "22-lts"
     }
   }
 

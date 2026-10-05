@@ -2,9 +2,6 @@
 -- Run in SSMS: Creates the Loans table
 -- Tracks money borrowed from others AND money lent to others
 -- ============================================================
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.Loans', 'U') IS NULL
 CREATE TABLE dbo.Loans (
     LoanID              INT IDENTITY(1,1) PRIMARY KEY,

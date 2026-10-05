@@ -3,9 +3,6 @@
 -- Run this script once against your FinanceTracker database
 -- ============================================================
 
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.IncomeTax', 'U') IS NULL
 CREATE TABLE dbo.IncomeTax (
     TaxID           INT IDENTITY(1,1) PRIMARY KEY,

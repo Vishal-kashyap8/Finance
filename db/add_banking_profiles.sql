@@ -8,9 +8,6 @@
 -- stored in the backend .env file (DB_ENCRYPT_KEY).
 -- ============================================================
 
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.BankingProfiles', 'U') IS NULL
 CREATE TABLE dbo.BankingProfiles (
     ProfileID           INT IDENTITY(1,1)   PRIMARY KEY,

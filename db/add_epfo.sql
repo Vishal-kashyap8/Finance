@@ -3,9 +3,6 @@
 -- Run this script once against your FinanceTracker database
 -- ============================================================
 
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.EPFOAccounts', 'U') IS NULL
 CREATE TABLE dbo.EPFOAccounts (
     EPFOID          INT IDENTITY(1,1) PRIMARY KEY,

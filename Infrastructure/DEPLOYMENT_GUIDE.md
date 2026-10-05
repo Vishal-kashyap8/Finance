@@ -1,4 +1,6 @@
-# Deploying Finance App to Azure App Service with Managed Instance
+# Retired: Managed Instance Deployment Guide
+
+> Do not run the commands in this legacy guide. This project is moving to Azure SQL Database; follow [AZURE_SQL_DEPLOYMENT.md](AZURE_SQL_DEPLOYMENT.md) instead. The examples below refer to the retired Managed Instance configuration.
 
 ## Overview
 
@@ -268,7 +270,7 @@ Server=tcp:<FQDN>,3342;Initial Catalog=<DatabaseName>;User Id=<Username>;Passwor
 
 Example:
 ```
-Server=tcp:db-sql-mi-0569414.11111111.database.windows.net,3342;Initial Catalog=financedb;User Id=sqladmin;Password=P@ssw0rd;
+Server=tcp:<managed-instance-fqdn>,3342;Initial Catalog=<database>;User Id=<username>;Password=<password>;
 ```
 
 ## Troubleshooting

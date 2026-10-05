@@ -1,9 +1,6 @@
 -- ============================================================
 -- Run in SSMS: Adds PaymentSource tracking to Transactions
 -- ============================================================
-USE FinanceTracker;
-GO
-
 -- 1. Add PaymentSource column (Cash/Salary/Credit Card/Bank Account/Other)
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('dbo.Transactions') AND name='PaymentSource')
     ALTER TABLE dbo.Transactions

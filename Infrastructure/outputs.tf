@@ -22,3 +22,13 @@ output "app_service_url" {
   description = "URL of the App Service"
   value       = "https://${azurerm_linux_web_app.app_service.default_hostname}"
 }
+
+output "app_service_possible_outbound_ip_addresses" {
+  description = "Possible outbound IP addresses to allow in the Azure SQL firewall"
+  value       = azurerm_linux_web_app.app_service.possible_outbound_ip_address_list
+}
+
+output "sql_server_fqdn" {
+  description = "Fully qualified Azure SQL server host"
+  value       = azurerm_mssql_server.sql_server.fully_qualified_domain_name
+}

@@ -156,11 +156,12 @@ Changing the **Type** filter automatically narrows the **Category** dropdown to 
 
 ### 1. Create the database
 
-Open SSMS → Connect to `localhost` → Open `db\schema.sql` → Execute (F5).
+Open SSMS → connect to `localhost` → create the `FinanceTracker` database if needed → select it → open `db\schema.sql` → execute (F5).
 
 Or via command line:
 ```
-sqlcmd -S localhost -E -i db\schema.sql
+sqlcmd -S localhost -E -Q "IF DB_ID('FinanceTracker') IS NULL CREATE DATABASE FinanceTracker"
+sqlcmd -S localhost -E -d FinanceTracker -i db\schema.sql
 ```
 
 This creates the `FinanceTracker` database with all core tables and seed data.
@@ -168,16 +169,16 @@ This creates the `FinanceTracker` database with all core tables and seed data.
 ### 2. Run migration scripts (in order)
 
 ```
-sqlcmd -S localhost -E -i db\add_payment_source.sql
-sqlcmd -S localhost -E -i db\add_loans.sql
-sqlcmd -S localhost -E -i db\add_creditcards.sql
-sqlcmd -S localhost -E -i db\add_epfo.sql
-sqlcmd -S localhost -E -i db\add_incometax.sql
-sqlcmd -S localhost -E -i db\add_incometax_interest.sql
-sqlcmd -S localhost -E -i db\add_notes.sql
-sqlcmd -S localhost -E -i db\add_credit_card_bill_category.sql
-sqlcmd -S localhost -E -i db\add_categories.sql
-sqlcmd -S localhost -E -i db\add_banking_profiles.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_payment_source.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_loans.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_creditcards.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_epfo.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_incometax.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_incometax_interest.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_notes.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_credit_card_bill_category.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_categories.sql
+sqlcmd -S localhost -E -d FinanceTracker -i db\add_banking_profiles.sql
 ```
 
 Each script is idempotent — safe to re-run:

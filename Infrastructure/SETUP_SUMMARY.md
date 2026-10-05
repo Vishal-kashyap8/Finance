@@ -1,4 +1,6 @@
-# Finance App Deployment - Setup Summary
+# Retired: Managed Instance Setup Summary
+
+> This document describes the previous Managed Instance deployment and is no longer current. Do not run its commands; use [AZURE_SQL_DEPLOYMENT.md](AZURE_SQL_DEPLOYMENT.md).
 
 ## ✅ Completed
 

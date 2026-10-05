@@ -2,11 +2,15 @@
 
 This Terraform configuration creates an Azure App Service running on Linux with a Free or Basic tier.
 
+The current migration adds an Azure SQL logical server. The free Azure SQL Database offer is created by the Azure DevOps pipeline because the AzureRM Terraform provider does not expose the free-limit exhaustion setting. See [AZURE_SQL_DEPLOYMENT.md](AZURE_SQL_DEPLOYMENT.md) for prerequisites and limitations.
+
 ## Resources Created
 
 - **Resource Group**: Container for all resources
 - **App Service Plan**: Linux-based plan with F1 (Free) or B1 (Basic) SKU
 - **Linux Web App**: App Service instance
+- **Azure SQL logical server**: SQL authentication enabled, TLS 1.2 minimum
+- **Azure SQL Database**: Created by the pipeline with the Azure free offer and auto-pause on free-limit exhaustion
 
 ## Prerequisites
 
@@ -20,9 +24,9 @@ This Terraform configuration creates an Azure App Service running on Linux with 
 
 ## Configuration
 
-### 1. Update `terraform.tfvars`
+### 1. Configure Terraform inputs
 
-Edit `terraform.tfvars` and replace the placeholder values:
+Set the non-secret resource names in `terraform.tfvars` as needed. Supply the SQL administrator password through the `TF_VAR_sql_admin_password` environment variable or a secret CI variable. Do not store it in `terraform.tfvars`; Terraform state contains it in plain text.
 
 ```hcl
 subscription_id       = "your-actual-subscription-id"  # Get with: az account show --query id

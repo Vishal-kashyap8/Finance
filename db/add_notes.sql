@@ -2,9 +2,6 @@
 -- add_notes.sql  — Payment Reminders & Notes
 -- Safe to re-run (idempotent)
 -- ============================================================
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.Notes', 'U') IS NULL
 BEGIN
   CREATE TABLE dbo.Notes (

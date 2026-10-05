@@ -3,9 +3,6 @@
 -- Run this script once against your FinanceTracker database
 -- ============================================================
 
-USE FinanceTracker;
-GO
-
 IF NOT EXISTS (
     SELECT 1 FROM sys.columns
     WHERE object_id = OBJECT_ID('dbo.IncomeTax') AND name = 'InterestAndFee'

@@ -1,9 +1,6 @@
 -- ============================================================
 -- Run in SSMS: Adds additional Income & Expense categories For FinaceApp
 -- ============================================================
-USE FinanceTracker;
-GO
-
 -- ── INCOME categories ────────────────────────────────────────
 IF NOT EXISTS (SELECT 1 FROM dbo.TransactionCategories WHERE Type='Income' AND Name='Freelance')
     INSERT INTO dbo.TransactionCategories (Type, Name, Icon) VALUES ('Income', 'Freelance', NULL);

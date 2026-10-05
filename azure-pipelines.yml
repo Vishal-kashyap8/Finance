@@ -15,6 +15,8 @@ variables:
   location: 'centralindia'
   appServicePlanName: 'finance-app-plan'
   webAppName: 'finance-app-001'
+  sqlServerName: 'finance-sql-server-001'
+  databaseName: 'FinanceTracker'
   terraformVersion: '1.9.5'
   terraformWorkingDirectory: '$(Build.SourcesDirectory)/Infrastructure'
   appPackagePath: '$(Build.SourcesDirectory)/finance-app.zip'
@@ -56,12 +58,20 @@ stages:
                 export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
 
                 cd "$(terraformWorkingDirectory)"
-                terraform init -input=false
+                terraform init -input=false -reconfigure \
+                  -backend-config="resource_group_name=$(SQL_DevOps_Vishal)" \
+                  -backend-config="storage_account_name=$(devops3344)" \
+                  -backend-config="container_name=terraform1" \
+                  -backend-config="key=prod.terraform.tfstate" \
+                  -backend-config="use_azuread_auth=true"
                 terraform validate
                 terraform plan -input=false -var="subscription_id=$ARM_SUBSCRIPTION_ID" -out=tfplan
+            env:
+              TF_VAR_sql_admin_password: $(SQL_ADMIN_PASSWORD)
 
           - task: AzureCLI@2
             displayName: Terraform apply
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
             inputs:
               azureSubscription: $(azureSubscription)
               scriptType: bash
@@ -73,11 +83,42 @@ stages:
 
                 cd "$(terraformWorkingDirectory)"
                 terraform apply -input=false -auto-approve tfplan
+            env:
+              TF_VAR_sql_admin_password: $(SQL_ADMIN_PASSWORD)
+
+          - task: AzureCLI@2
+            displayName: Create free Azure SQL database
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                if ! az sql db show \
+                  --resource-group "$(resourceGroupName)" \
+                  --server "$(sqlServerName)" \
+                  --name "$(databaseName)" \
+                  --only-show-errors >/dev/null 2>&1; then
+                  az sql db create \
+                    --resource-group "$(resourceGroupName)" \
+                    --server "$(sqlServerName)" \
+                    --name "$(databaseName)" \
+                    --edition GeneralPurpose \
+                    --compute-model Serverless \
+                    --family Gen5 \
+                    --min-capacity 0.5 \
+                    --capacity 2 \
+                    --use-free-limit true \
+                    --free-limit-exhaustion-behavior AutoPause \
+                    --backup-storage-redundancy Local \
+                    --only-show-errors
+                fi
 
   - stage: Application
     displayName: Deploy Application to Azure App Service
     dependsOn: Infrastructure
-    condition: succeeded()
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
     jobs:
       - job: DeployApp
         displayName: Deploy Node.js app
@@ -87,16 +128,16 @@ stages:
           - checkout: self
 
           - task: NodeTool@0
-            displayName: Install Node.js 20
+            displayName: Install Node.js 22
             inputs:
-              versionSpec: '20.x'
+              versionSpec: '22.x'
 
           - script: |
               set -e
               mkdir -p "$(Build.SourcesDirectory)/release"
-              cp -R "$(Build.SourcesDirectory)/backend/." "$(Build.SourcesDirectory)/release/"
-              cp -R "$(Build.SourcesDirectory)/frontend" "$(Build.SourcesDirectory)/release/"
               cp "$(Build.SourcesDirectory)/package.json" "$(Build.SourcesDirectory)/release/package.json"
+              cp -R "$(Build.SourcesDirectory)/backend" "$(Build.SourcesDirectory)/release/backend"
+              cp -R "$(Build.SourcesDirectory)/frontend" "$(Build.SourcesDirectory)/release/frontend"
 
               cd "$(Build.SourcesDirectory)/release"
               npm install --omit=dev
@@ -117,13 +158,45 @@ stages:
                     PORT=8080 \
                     NODE_ENV=production \
                     SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-                    WEBSITES_PORT=8080
+                    WEBSITES_PORT=8080 \
+                    DB_SERVER="$(sqlServerName).database.windows.net" \
+                    DB_PORT=1433 \
+                    DB_DATABASE="$(databaseName)" \
+                    DB_TRUSTED_CONNECTION=false \
+                    DB_USER="$DB_USER" \
+                    DB_PASSWORD="$DB_PASSWORD" \
+                    DB_ENCRYPT_KEY="$DB_ENCRYPT_KEY" \
+                    APP_USER="$APP_USER" \
+                    APP_PASSWORD="$APP_PASSWORD"
+
+                app_ips=$(az webapp show \
+                  --name "$(webAppName)" \
+                  --resource-group "$(resourceGroupName)" \
+                  --query possibleOutboundIpAddresses \
+                  --output tsv)
+                IFS=',' read -ra ip_list <<< "$app_ips"
+                for ip in "${ip_list[@]}"; do
+                  rule_name="appservice-${ip//./-}"
+                  az sql server firewall-rule create \
+                    --resource-group "$(resourceGroupName)" \
+                    --server "$(sqlServerName)" \
+                    --name "$rule_name" \
+                    --start-ip-address "$ip" \
+                    --end-ip-address "$ip" \
+                    --only-show-errors
+                done
 
                 az webapp config set \
                   --name "$(webAppName)" \
                   --resource-group "$(resourceGroupName)" \
-                  --linux-fx-version "NODE|20-lts" \
+                  --linux-fx-version "NODE|22-lts" \
                   --startup-file "npm start"
+            env:
+              DB_USER: $(DB_USER)
+              DB_PASSWORD: $(DB_PASSWORD)
+              DB_ENCRYPT_KEY: $(DB_ENCRYPT_KEY)
+              APP_USER: $(APP_USER)
+              APP_PASSWORD: $(APP_PASSWORD)
 
           - task: AzureWebApp@1
             displayName: Deploy package to App Service

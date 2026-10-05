@@ -1,9 +1,6 @@
 -- ============================================================
 -- Run in SSMS: Adds the Credit Cards table
 -- ============================================================
-USE FinanceTracker;
-GO
-
 IF OBJECT_ID('dbo.CreditCards', 'U') IS NULL
 CREATE TABLE dbo.CreditCards (
     CardID          INT IDENTITY(1,1) PRIMARY KEY,

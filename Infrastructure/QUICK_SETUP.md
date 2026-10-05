@@ -1,4 +1,6 @@
-# Quick Setup Guide - Move Managed Instance & Configure App Service
+# Retired: Managed Instance Quick Setup
+
+> Do not run these commands. They move a Managed Instance and configure obsolete `DATABASE_*` settings. Follow [AZURE_SQL_DEPLOYMENT.md](AZURE_SQL_DEPLOYMENT.md) for the current plan.
 
 ## Step 1: Move Managed Instance (Run these commands one by one)
 
