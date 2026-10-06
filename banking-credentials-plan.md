@@ -203,21 +203,21 @@ Add all JS functions to `frontend/js/app.js` to drive the Banking Profiles page:
 ### Sub-Task 6 — Environment: Add Encryption Key Variable
 
 **Intent**
-Document the new `DB_ENCRYPT_KEY` environment variable so it is not missed during setup or deployment.
+Document the new `DB_ENCRYPT_KEY` environment variable so it is not missed during local setup.
 
 **Expected Outcomes**
 - `backend/.env.example` has a `DB_ENCRYPT_KEY=` entry with a comment explaining its purpose
-- `Infrastructure/README.md` or `Infrastructure/DEPLOYMENT_GUIDE.md` notes that this env var must be set before running the backend
+- The root `README.md` documents that the variable must be set before running the backend
 
 **Todo List**
-- [ ] Add `DB_ENCRYPT_KEY=your-strong-passphrase-here` to `backend/.env.example` with a comment
-- [ ] Add a note to `Infrastructure/DEPLOYMENT_GUIDE.md` under environment variables section
+- [x] Add `DB_ENCRYPT_KEY=your-strong-passphrase-here` to `backend/.env.example` with a comment
+- [x] Document the environment variable in the root `README.md`
 
 **Relevant Context**
-- `backend/.env.example` (existing env var documentation)
-- `Infrastructure/DEPLOYMENT_GUIDE.md`
+- `backend/.env.example`
+- `README.md`
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 ---
 
