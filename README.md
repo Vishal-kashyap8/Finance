@@ -1,8 +1,23 @@
 # 💰 Personal Finance Tracker
 
-A full-stack personal finance management application — Node.js/Express backend + plain HTML/CSS/JS frontend + SQL Server database.
+A full-stack personal finance management application built with Node.js/Express, a plain HTML/CSS/JavaScript frontend, and Microsoft SQL Server.
 
-The UI now follows a cleaner dashboard workspace model with a modern sidebar, sharp card grids, brighter financial KPIs, and a more organized page experience while preserving the same core module flows, data shapes, and application behaviors.
+The application provides a modern, responsive dashboard workspace with page-level privacy controls, compact financial cards, searchable bank selectors, detailed financial records, and CRUD management for the personal finance modules.
+
+---
+
+## Current Application Highlights
+
+- **Responsive vertical navigation** — a collapsible desktop sidebar and mobile drawer, with a header menu toggle and keyboard shortcut.
+- **Dashboard workspace** — consolidated financial KPIs, net-worth trend and breakdown charts, monthly income/expense views, expense donut, maturity alerts, recent transactions, and pending reminders/todos.
+- **Per-section privacy controls** — monetary values and sensitive financial identifiers can be hidden independently on each page.
+- **Credit card tiles** — compact visual cards with bank details, masked card number, usage percentage, outstanding balance, minimum due, and direct edit controls.
+- **Bank selection and logos** — searchable bank picker with bank logos, custom-bank support, IFSC auto-fill, and bank-profile links.
+- **Income and transaction filters** — date, type, category, and payment-source filters with automatic category filtering.
+- **Banking profiles** — per-bank credential vault with encrypted sensitive fields and individual reveal controls.
+- **Payments and notes** — reminders, todos, and notes with priority, status, due dates, tags, amounts, and action items surfaced on the dashboard.
+- **Investment, loan, EPFO, and income-tax tracking** — complete module flows for investments, borrowed/lent money, provident fund records, and tax filing details.
+- **Responsive presentation** — the application layout adapts to desktop and mobile screens without affecting the underlying data models.
 
 ---
 
@@ -16,7 +31,7 @@ The UI now follows a cleaner dashboard workspace model with a modern sidebar, sh
 | 🏛️ Fixed Deposits | Bank, principal, rate, start/maturity dates, maturity amount, status, maturity alerts |
 | 📅 Recurring Deposits | Monthly installment, installments paid/remaining, expected maturity amount, maturity alerts |
 | 📈 Investments | Mutual Funds, Stocks, PPF, NPS, Gold, Bonds, ETFs — invested vs current value, gain/loss |
-| 💳 Credit Cards | Multiple cards — searchable bank picker with logos and custom bank option, bank logos in the table, credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits**, **edit directly from card tile** |
+| 💳 Credit Cards | Multiple cards — compact visual tiles, searchable bank picker with logos and custom bank option, bank logos in the table, credit limit, outstanding, minimum due, utilisation, reward points, APR, **masked last-4 digits**, and **direct tile editing** |
 | 🤝 Loans | Money borrowed (you owe) and money lent (others owe you) — principal, outstanding, interest, due dates |
 | 🧾 Income & Expenses | Categorised income and expense transactions with **Date, Type, Category, and Paid Via column filters**; income can optionally be linked to a receiving bank account |
 | 🏢 EPFO Balance | Employee Provident Fund accounts — **masked UAN**, employer, balance |
@@ -542,6 +557,13 @@ All scripts in `db/` are safe to re-run. Run them in the order listed during fre
 ---
 
 ## Changelog
+
+### v1.9 — Current Application UI & Feature Updates
+- **Compact credit card tiles** — visual credit cards now use a responsive 250px maximum width with reduced padding, typography, and spacing for a less oversized appearance.
+- **Responsive sidebar navigation** — desktop navigation can be collapsed and restored, while mobile navigation uses a drawer with backdrop and automatic closing after page selection.
+- **Improved dashboard workspace** — financial KPIs, charts, maturity alerts, recent transactions, and pending actions are presented in a clearer, more organized layout.
+- **Current privacy behavior** — monetary values and sensitive identity fields remain masked by default while each section retains its own independent reveal control.
+- **Current module coverage** — credit cards, bank accounts, cash, fixed deposits, recurring deposits, investments, loans, EPFO, income tax, transactions, notes, payments, and banking profiles are documented as supported application features.
 
 ### v1.8 — Sidebar, Dashboard & Credit Card Updates
 - **Vertical, collapsible navigation** — the header menu button hides or restores the sidebar. Desktop page changes leave navigation open; on smaller screens, the sidebar is a drawer that closes after selection or when its backdrop is clicked. The `S` shortcut still toggles it.
