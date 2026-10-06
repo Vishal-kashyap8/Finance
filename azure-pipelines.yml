@@ -12,7 +12,7 @@ variables:
   vmImageName: 'ubuntu-latest'
   azureSubscription: 'Finance-connection'
   resourceGroupName: 'finance-rg'
-  location: 'centralindia'
+  location: 'East US'
   appServicePlanName: 'finance-app-plan'
   webAppName: 'finance-app-001'
   sqlServerName: 'finance-sql-server-001'
