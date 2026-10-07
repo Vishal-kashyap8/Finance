@@ -10,6 +10,19 @@ router.get('/', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/accounts', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT AccountID, Nickname, BankName, AccountType, Balance
+      FROM dbo.BankAccounts
+      WHERE IsActive = 1
+      ORDER BY BankName, Nickname
+    `);
+    res.json(result.recordset);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const pool = await getPool();
@@ -22,12 +35,32 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { BankName, AccountRef, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes } = req.body;
+  const { BankName, AccountRef, LinkedAccountID, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes } = req.body;
+  if (!LinkedAccountID || Number(Principal) <= 0) {
+    return res.status(400).json({ error: 'Select a funding account and provide a positive principal amount.' });
+  }
+
+  const dbTx = new sql.Transaction(await getPool());
   try {
-    const pool = await getPool();
-    const result = await pool.request()
+    await dbTx.begin();
+    const accountResult = await new sql.Request(dbTx)
+      .input('accountId', sql.Int, Number(LinkedAccountID))
+      .input('principal', sql.Decimal(18, 2), Number(Principal))
+      .query(`
+        UPDATE dbo.BankAccounts
+        SET Balance = Balance - @principal,
+            LastUpdated = GETDATE()
+        WHERE AccountID = @accountId
+          AND Balance >= @principal
+      `);
+    if (!accountResult.rowsAffected[0]) {
+      throw new Error('Selected account does not have enough balance for this FD.');
+    }
+
+    const result = await new sql.Request(dbTx)
       .input('BankName',       sql.NVarChar(100), BankName)
       .input('AccountRef',     sql.NVarChar(100), AccountRef || null)
+      .input('LinkedAccountID', sql.Int, Number(LinkedAccountID))
       .input('Principal',      sql.Decimal(18,2), Principal)
       .input('InterestRate',   sql.Decimal(5,2),  InterestRate)
       .input('StartDate',      sql.Date,          StartDate)
@@ -36,22 +69,27 @@ router.post('/', async (req, res) => {
       .input('Status',         sql.NVarChar(10),  Status || 'Active')
       .input('Notes',          sql.NVarChar(500), Notes || null)
       .query(`
-        INSERT INTO dbo.FixedDeposits (BankName, AccountRef, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes)
+        INSERT INTO dbo.FixedDeposits (BankName, AccountRef, LinkedAccountID, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes)
         OUTPUT INSERTED.*
-        VALUES (@BankName, @AccountRef, @Principal, @InterestRate, @StartDate, @MaturityDate, @MaturityAmount, @Status, @Notes)
+        VALUES (@BankName, @AccountRef, @LinkedAccountID, @Principal, @InterestRate, @StartDate, @MaturityDate, @MaturityAmount, @Status, @Notes)
       `);
+    await dbTx.commit();
     res.status(201).json(result.recordset[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    if (dbTx._aborted !== true) await dbTx.rollback().catch(() => {});
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/:id', async (req, res) => {
-  const { BankName, AccountRef, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes } = req.body;
+  const { BankName, AccountRef, LinkedAccountID, Principal, InterestRate, StartDate, MaturityDate, MaturityAmount, Status, Notes } = req.body;
   try {
     const pool = await getPool();
     const result = await pool.request()
       .input('id',             sql.Int,           req.params.id)
       .input('BankName',       sql.NVarChar(100), BankName)
       .input('AccountRef',     sql.NVarChar(100), AccountRef || null)
+      .input('LinkedAccountID', sql.Int,           LinkedAccountID || null)
       .input('Principal',      sql.Decimal(18,2), Principal)
       .input('InterestRate',   sql.Decimal(5,2),  InterestRate)
       .input('StartDate',      sql.Date,          StartDate)
@@ -61,9 +99,10 @@ router.put('/:id', async (req, res) => {
       .input('Notes',          sql.NVarChar(500), Notes || null)
       .query(`
         UPDATE dbo.FixedDeposits
-        SET BankName=@BankName, AccountRef=@AccountRef, Principal=@Principal,
-            InterestRate=@InterestRate, StartDate=@StartDate, MaturityDate=@MaturityDate,
-            MaturityAmount=@MaturityAmount, Status=@Status, Notes=@Notes
+        SET BankName=@BankName, AccountRef=@AccountRef, LinkedAccountID=@LinkedAccountID,
+            Principal=@Principal, InterestRate=@InterestRate, StartDate=@StartDate,
+            MaturityDate=@MaturityDate, MaturityAmount=@MaturityAmount,
+            Status=@Status, Notes=@Notes
         OUTPUT INSERTED.*
         WHERE FDID=@id
       `);

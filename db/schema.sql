@@ -43,6 +43,8 @@ CREATE TABLE dbo.FixedDeposits (
     FDID            INT IDENTITY(1,1) PRIMARY KEY,
     BankName        NVARCHAR(100)   NOT NULL,
     AccountRef      NVARCHAR(100)   NULL,          -- FD number / nickname
+    LinkedAccountID INT             NULL CONSTRAINT FK_FixedDeposits_BankAccounts
+        FOREIGN KEY (LinkedAccountID) REFERENCES dbo.BankAccounts(AccountID), -- bank account that funds the FD
     Principal       DECIMAL(18,2)   NOT NULL,
     InterestRate    DECIMAL(5,2)    NOT NULL,       -- annual %
     StartDate       DATE            NOT NULL,

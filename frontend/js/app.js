@@ -1028,8 +1028,9 @@ function renderFDTable(fds) {
   }
   tbody.innerHTML = fds.map(f => {
     const daysLeft = Math.ceil((new Date(f.MaturityDate) - new Date()) / 86400000);
+    const bankLogo = _bankLogoTag(f.BankName, 22);
     return `<tr>
-      <td><strong>${f.BankName}</strong>${f.AccountRef ? '<br><span style="font-size:11px;color:var(--muted)">'+f.AccountRef+'</span>' : ''}</td>
+      <td><strong style="white-space:nowrap">${bankLogo}<span style="margin-left:8px">${f.BankName}</span></strong>${f.AccountRef ? '<br><span style="font-size:11px;color:var(--muted)">'+f.AccountRef+'</span>' : ''}${f.LinkedAccountID ? '<br><span style="font-size:11px;color:var(--muted)">Funding account #'+f.LinkedAccountID+'</span>' : ''}</td>
       <td style="font-weight:600">${mfmt(f.Principal)}</td>
       <td>${f.InterestRate}%</td>
       <td>${fmtDate(f.StartDate)}</td>
@@ -1046,11 +1047,28 @@ function renderFDTable(fds) {
 }
 
 function fdForm(f = {}) {
+  const isCustom = f.BankName && !BP_BANKS.find(b => b.name === f.BankName);
   return `
     <div class="form-row">
       <div class="form-group">
         <label>Bank Name *</label>
-        <input class="form-control" id="f-bank" value="${f.BankName||''}" required/>
+        <input type="hidden" id="f-BankName" value="${f.BankName||''}"/>
+        <div class="bank-picker-wrap" id="f-bank-picker-wrap">
+          <button type="button" class="bank-picker-trigger" id="f-bank-trigger">
+            <span class="bank-picker-placeholder">Select a bank…</span>
+            <span class="bp-chevron">▼</span>
+          </button>
+          <div class="bank-picker-dropdown" id="f-bank-dropdown">
+            <div class="bank-picker-search">
+              <input id="f-bank-search" placeholder="Search banks…" autocomplete="off"/>
+            </div>
+            <div class="bank-picker-list" id="f-bank-list"></div>
+          </div>
+        </div>
+        <div class="form-group" style="display:${isCustom ? '' : 'none'}" id="f-custom-bank-row">
+          <label>Custom Bank Name *</label>
+          <input class="form-control" id="f-BankNameCustom" value="${isCustom ? f.BankName : ''}" placeholder="Type your bank name"/>
+        </div>
       </div>
       <div class="form-group">
         <label>FD Number / Reference</label>
@@ -1059,29 +1077,37 @@ function fdForm(f = {}) {
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label>Funding Account *</label>
+        <select class="form-control" id="f-account" required>
+          <option value="">Loading accounts…</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Principal (₹) *</label>
         <input class="form-control" id="f-principal" type="number" step="0.01" value="${f.Principal||''}" required/>
       </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Interest Rate (% p.a.) *</label>
         <input class="form-control" id="f-rate" type="number" step="0.01" value="${f.InterestRate||''}" required/>
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Start Date *</label>
         <input class="form-control" id="f-start" type="date" value="${fmtDateInput(f.StartDate)}" required/>
       </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Maturity Date *</label>
         <input class="form-control" id="f-matdate" type="date" value="${fmtDateInput(f.MaturityDate)}" required/>
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Maturity Amount (₹) *</label>
         <input class="form-control" id="f-matamt" type="number" step="0.01" value="${f.MaturityAmount||''}" required/>
       </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Status</label>
         <select class="form-control" id="f-status">
@@ -1097,27 +1123,55 @@ function fdForm(f = {}) {
     </div>`;
 }
 
+function populateFDAccounts(f = {}) {
+  return apiFetch('/fd/accounts').then(accounts => {
+    const select = el('f-account');
+    if (!select) return;
+    select.innerHTML = '<option value="">Select bank account</option>' + accounts.map(a =>
+      `<option value="${a.AccountID}" ${f.LinkedAccountID==a.AccountID?'selected':''}>${a.Nickname} (${a.BankName}) — ${mfmt(a.Balance)}</option>`).join('');
+  }).catch(() => {
+    const select = el('f-account');
+    if (select) select.innerHTML = '<option value="">Unable to load accounts</option>';
+  });
+}
+
+function _fdBankName() {
+  const hiddenBank = modalVal('f-BankName').trim();
+  const customBank = (document.getElementById('f-BankNameCustom') || {}).value?.trim() || '';
+  return hiddenBank || customBank;
+}
+
 function addFD() {
   openModal('Add Fixed Deposit', fdForm(), 'Save FD', async () => {
-    const body = { BankName: modalVal('f-bank'), AccountRef: modalVal('f-ref'),
+    const body = { BankName: _fdBankName(), AccountRef: modalVal('f-ref'),
+      LinkedAccountID: modalVal('f-account') || null,
       Principal: modalVal('f-principal'), InterestRate: modalVal('f-rate'),
       StartDate: modalVal('f-start'), MaturityDate: modalVal('f-matdate'),
       MaturityAmount: modalVal('f-matamt'), Status: modalVal('f-status'), Notes: modalVal('f-notes') };
     await apiFetch('/fd', { method: 'POST', body: JSON.stringify(body) });
-    showToast('FD added!'); closeModal(); loadFD();
+    showToast('FD added and funding account debited!'); closeModal(); loadFD();
   });
+  setTimeout(() => {
+    _initBankPicker('', 'f');
+    populateFDAccounts();
+  }, 0);
 }
 
 async function editFD(id) {
   const f = await apiFetch('/fd/' + id);
   openModal('Edit Fixed Deposit', fdForm(f), 'Update FD', async () => {
-    const body = { BankName: modalVal('f-bank'), AccountRef: modalVal('f-ref'),
+    const body = { BankName: _fdBankName(), AccountRef: modalVal('f-ref'),
+      LinkedAccountID: modalVal('f-account') || null,
       Principal: modalVal('f-principal'), InterestRate: modalVal('f-rate'),
       StartDate: modalVal('f-start'), MaturityDate: modalVal('f-matdate'),
       MaturityAmount: modalVal('f-matamt'), Status: modalVal('f-status'), Notes: modalVal('f-notes') };
     await apiFetch('/fd/' + id, { method: 'PUT', body: JSON.stringify(body) });
     showToast('FD updated!'); closeModal(); loadFD();
   });
+  setTimeout(() => {
+    _initBankPicker(f.BankName || '', 'f');
+    populateFDAccounts(f);
+  }, 0);
 }
 
 async function deleteFD(id) {
